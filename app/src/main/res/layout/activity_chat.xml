@@ -43,6 +43,15 @@
         android:padding="8dp"
         android:background="@color/light_gray">
 
+        <ImageButton
+            android:id="@+id/buttonAttach"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_attach"
+            android:background="@drawable/attach_button_background"
+            android:contentDescription="Dosya Ekle"
+            android:layout_marginEnd="8dp" />
+
         <EditText
             android:id="@+id/editTextMessage"
             android:layout_width="0dp"

@@ -1,22 +1,31 @@
 package com.selimqueengh.sohbet
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.models.User
+import com.selimqueengh.sohbet.services.FirebaseService
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabAddFriend: FloatingActionButton
     private lateinit var chatAdapter: ChatAdapter
+    private lateinit var firebaseService: FirebaseService
+    private lateinit var sharedPreferences: SharedPreferences
+    
     private val chatList = mutableListOf<ChatItem>()
+    private var currentUserId: String = ""
     private var currentUsername: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,12 +34,17 @@ class MainActivity : AppCompatActivity() {
 
         currentUsername = intent.getStringExtra("username") ?: "Kullanıcı"
         
+        sharedPreferences = getSharedPreferences("SnickersChatv4", MODE_PRIVATE)
+        currentUserId = sharedPreferences.getString("user_id", "") ?: ""
+        
+        firebaseService = FirebaseService()
+        
         initViews()
         setupRecyclerView()
         setupClickListeners()
         
-        // Örnek sohbetler ekle
-        addSampleChats()
+        // Load chats from Firebase
+        loadChatsFromFirebase()
     }
 
     private fun initViews() {
@@ -64,54 +78,66 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
-    private fun addSampleChats() {
-        val sampleChats = listOf(
-            ChatItem(
-                chatId = "1",
-                username = "Ahmet Yılmaz",
-                lastMessage = "Merhaba! Nasılsın?",
-                timestamp = System.currentTimeMillis() - 300000,
-                unreadCount = 2,
-                isOnline = true
-            ),
-            ChatItem(
-                chatId = "2", 
-                username = "Ayşe Demir",
-                lastMessage = "Toplantı saat kaçta?",
-                timestamp = System.currentTimeMillis() - 600000,
-                unreadCount = 0,
-                isOnline = false
-            ),
-            ChatItem(
-                chatId = "3",
-                username = "Mehmet Kaya", 
-                lastMessage = "Dosyayı gönderdim",
-                timestamp = System.currentTimeMillis() - 900000,
-                unreadCount = 1,
-                isOnline = true
-            )
-        )
-        
-        chatList.addAll(sampleChats)
-        chatAdapter.notifyDataSetChanged()
+    private fun loadChatsFromFirebase() {
+        if (currentUserId.isNotEmpty()) {
+            lifecycleScope.launch {
+                try {
+                    val result = firebaseService.getChats(currentUserId)
+                    if (result.isSuccess) {
+                        val chats = result.getOrNull() ?: emptyList()
+                        chatList.clear()
+                        
+                        // Convert Firebase chats to ChatItem
+                        chats.forEach { chatData ->
+                            val otherUserId = if (chatData["user1Id"] == currentUserId) {
+                                chatData["user2Id"] as? String ?: ""
+                            } else {
+                                chatData["user1Id"] as? String ?: ""
+                            }
+                            
+                            if (otherUserId.isNotEmpty()) {
+                                // Get user info for display
+                                val userResult = firebaseService.getUsers()
+                                if (userResult.isSuccess) {
+                                    val users = userResult.getOrNull() ?: emptyList()
+                                    val otherUser = users.find { it.id == otherUserId }
+                                    
+                                    val chatItem = ChatItem(
+                                        chatId = chatData["chatId"] as? String ?: "",
+                                        username = otherUser?.username ?: "Bilinmeyen Kullanıcı",
+                                        lastMessage = chatData["lastMessageContent"] as? String ?: "Henüz mesaj yok",
+                                        timestamp = (chatData["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
+                                        unreadCount = 0, // TODO: Implement unread count
+                                        isOnline = otherUser?.isOnline ?: false
+                                    )
+                                    chatList.add(chatItem)
+                                }
+                            }
+                        }
+                        
+                        chatAdapter.notifyDataSetChanged()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Sohbetler yüklenemedi", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
+        // Menu removed as requested
+        return false
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_profile -> {
-                // Profil ekranına git
-                true
-            }
-            R.id.action_settings -> {
-                // Ayarlar ekranına git
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
+        return super.onOptionsItemSelected(item)
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Refresh chats when returning to this activity
+        loadChatsFromFirebase()
     }
 }

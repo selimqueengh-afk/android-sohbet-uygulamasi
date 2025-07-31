@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +21,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var messageEditText: EditText
     private lateinit var sendButton: Button
+    private lateinit var attachButton: android.widget.ImageButton
     private lateinit var chatTitleText: TextView
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var firebaseService: FirebaseService
@@ -62,6 +64,7 @@ class ChatActivity : AppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerViewMessages)
         messageEditText = findViewById(R.id.editTextMessage)
         sendButton = findViewById(R.id.buttonSend)
+        attachButton = findViewById(R.id.buttonAttach)
         chatTitleText = findViewById(R.id.chatTitleText)
         
         // Set chat title
@@ -79,6 +82,10 @@ class ChatActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         sendButton.setOnClickListener {
             sendMessage()
+        }
+        
+        attachButton.setOnClickListener {
+            showAttachmentDialog()
         }
     }
 
@@ -207,5 +214,63 @@ class ChatActivity : AppCompatActivity() {
         
         messageList.addAll(sampleMessages)
         messageAdapter.notifyDataSetChanged()
+    }
+
+    private fun showAttachmentDialog() {
+        val options = arrayOf("Resim Seç", "Video Seç")
+        AlertDialog.Builder(this)
+            .setTitle("Dosya Ekle")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> selectImage()
+                    1 -> selectVideo()
+                }
+            }
+            .setNegativeButton("İptal") { _, _ -> }
+            .show()
+    }
+
+    private fun selectImage() {
+        // For now, we'll simulate image selection
+        // In a real app, you would use Intent to pick from gallery
+        val imageUrl = "https://example.com/sample-image.jpg"
+        sendMediaMessage(imageUrl, "image/jpeg", "Resim")
+    }
+
+    private fun selectVideo() {
+        // For now, we'll simulate video selection
+        // In a real app, you would use Intent to pick from gallery
+        val videoUrl = "https://example.com/sample-video.mp4"
+        sendMediaMessage(videoUrl, "video/mp4", "Video")
+    }
+
+    private fun sendMediaMessage(mediaUrl: String, mimeType: String, fileName: String) {
+        if (chatId.isNotEmpty()) {
+            val chatMessage = ChatMessage(
+                chatId = chatId,
+                senderId = currentUserId,
+                senderUsername = currentUsername,
+                content = "[$fileName]",
+                messageType = if (mimeType.startsWith("image/")) MessageType.IMAGE else MessageType.VIDEO,
+                timestamp = System.currentTimeMillis(),
+                mediaUrl = mediaUrl,
+                mediaFileName = fileName
+            )
+            
+            lifecycleScope.launch {
+                try {
+                    val result = firebaseService.sendMessage(chatMessage)
+                    if (result.isSuccess) {
+                        Toast.makeText(this@ChatActivity, "$fileName gönderildi", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ChatActivity, "$fileName gönderilemedi", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(this, "Sohbet bulunamadı", Toast.LENGTH_SHORT).show()
+        }
     }
 }

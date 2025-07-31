@@ -263,6 +263,55 @@ class FirebaseService {
         }
     }
 
+    suspend fun getFriendRequests(userId: String): Result<List<Map<String, Any>>> {
+        return try {
+            val snapshot = firestore.collection(FRIENDS_COLLECTION)
+                .whereEqualTo("friendId", userId)
+                .whereEqualTo("status", "pending")
+                .get()
+                .await()
+            
+            val requests = snapshot.documents.map { doc ->
+                doc.data?.toMutableMap()?.apply {
+                    put("requestId", doc.id)
+                } ?: mutableMapOf()
+            }
+            
+            Result.success(requests)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting friend requests", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun acceptFriendRequest(requestId: String): Result<Unit> {
+        return try {
+            firestore.collection(FRIENDS_COLLECTION)
+                .document(requestId)
+                .update("status", "accepted")
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error accepting friend request", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rejectFriendRequest(requestId: String): Result<Unit> {
+        return try {
+            firestore.collection(FRIENDS_COLLECTION)
+                .document(requestId)
+                .delete()
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error rejecting friend request", e)
+            Result.failure(e)
+        }
+    }
+
     // FCM Token management
     suspend fun updateFCMToken(userId: String): Result<String> {
         return try {

@@ -61,20 +61,11 @@ class FriendsFragment : Fragment() {
     }
 
     private fun addSampleFriends() {
-        val sampleFriends = listOf(
-            Friend("Ahmet Yılmaz", "Online", "avatar1"),
-            Friend("Ayşe Demir", "Son görülme: 2 saat önce", "avatar2"),
-            Friend("Mehmet Kaya", "Online", "avatar3"),
-            Friend("Fatma Özkan", "Son görülme: 1 gün önce", "avatar4"),
-            Friend("Ali Çelik", "Online", "avatar5")
-        )
-        friendsList.addAll(sampleFriends)
+        // Demo friends removed - will load from Firebase
         friendsAdapter.notifyDataSetChanged()
     }
 
     private fun addSampleFriend() {
-        val newFriend = Friend("Yeni Arkadaş", "Online", "avatar_default")
-        friendsList.add(newFriend)
-        friendsAdapter.notifyItemInserted(friendsList.size - 1)
+        // Demo friend functionality removed
     }
 }

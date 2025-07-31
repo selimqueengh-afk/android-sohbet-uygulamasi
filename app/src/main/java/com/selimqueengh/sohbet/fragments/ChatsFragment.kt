@@ -60,14 +60,7 @@ class ChatsFragment : Fragment() {
     }
 
     private fun loadSampleChats() {
-        val sampleChats = listOf(
-            ChatItem("1", "Ahmet Yılmaz", "Merhaba! Nasılsın?", System.currentTimeMillis() - 300000, 2, true),
-            ChatItem("2", "Ayşe Demir", "Toplantı saat kaçta?", System.currentTimeMillis() - 600000, 0, false),
-            ChatItem("3", "Mehmet Kaya", "Dosyayı gönderdim", System.currentTimeMillis() - 900000, 1, true),
-            ChatItem("4", "Fatma Özkan", "Harika! Teşekkürler 😊", System.currentTimeMillis() - 1800000, 0, false),
-            ChatItem("5", "Ali Çelik", "Yarın görüşürüz", System.currentTimeMillis() - 3600000, 3, true)
-        )
-        chatList.addAll(sampleChats)
+        // Demo chats removed - will load from Firebase
         chatAdapter.notifyDataSetChanged()
     }
 }
