@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Sohbet Uygulaması</string>
+    <string name="send">Gönder</string>
+    <string name="hint_message">Mesajınızı yazın</string>
+</resources>
