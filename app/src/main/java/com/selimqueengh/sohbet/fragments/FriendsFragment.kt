@@ -1,5 +1,6 @@
 package com.selimqueengh.sohbet.fragments
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -57,6 +58,12 @@ class FriendsFragment : Fragment() {
     private fun openChatWithFriend(friend: Friend) {
         val intent = Intent(requireContext(), ChatActivity::class.java)
         intent.putExtra("chat_partner", friend.name)
+        
+        // Mevcut kullanıcı adını al
+        val sharedPref = requireContext().getSharedPreferences("ChatApp", Context.MODE_PRIVATE)
+        val currentUsername = sharedPref.getString("username", "User") ?: "User"
+        intent.putExtra("current_username", currentUsername)
+        
         startActivity(intent)
     }
 
