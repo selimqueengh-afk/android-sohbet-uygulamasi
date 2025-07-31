@@ -62,6 +62,7 @@ class ChatActivity : AppCompatActivity() {
         if (messageText.isNotEmpty()) {
             val message = Message(
                 text = messageText,
+                sender = "Ben",
                 isSentByUser = true,
                 timestamp = System.currentTimeMillis()
             )
@@ -74,10 +75,30 @@ class ChatActivity : AppCompatActivity() {
 
     private fun addSampleMessages() {
         val sampleMessages = listOf(
-            Message("Merhaba! Nasılsın?", false, System.currentTimeMillis() - 300000),
-            Message("İyiyim, teşekkürler! Sen nasılsın?", true, System.currentTimeMillis() - 240000),
-            Message("Ben de iyiyim. Bu sohbeti test ediyoruz.", false, System.currentTimeMillis() - 180000),
-            Message("Harika! Çok güzel çalışıyor.", true, System.currentTimeMillis() - 120000)
+            Message(
+                text = "Merhaba! Nasılsın?",
+                sender = chatPartnerName,
+                isSentByUser = false,
+                timestamp = System.currentTimeMillis() - 300000
+            ),
+            Message(
+                text = "İyiyim, teşekkürler! Sen nasılsın?",
+                sender = "Ben",
+                isSentByUser = true,
+                timestamp = System.currentTimeMillis() - 240000
+            ),
+            Message(
+                text = "Ben de iyiyim. Bu sohbeti test ediyoruz.",
+                sender = chatPartnerName,
+                isSentByUser = false,
+                timestamp = System.currentTimeMillis() - 180000
+            ),
+            Message(
+                text = "Harika! Çok güzel çalışıyor.",
+                sender = "Ben",
+                isSentByUser = true,
+                timestamp = System.currentTimeMillis() - 120000
+            )
         )
         
         messageList.addAll(sampleMessages)
