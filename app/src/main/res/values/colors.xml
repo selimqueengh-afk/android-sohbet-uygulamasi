@@ -41,4 +41,10 @@
     <color name="dark_background">#111827</color>
     <color name="dark_surface">#1F2937</color>
     <color name="dark_text_primary">#F9FAFB</color>
+    
+    <!-- Additional Colors -->
+    <color name="light_gray">#F5F5F5</color>
+    <color name="black">#000000</color>
+    <color name="gray">#808080</color>
+    <color name="white">#FFFFFF</color>
 </resources>
