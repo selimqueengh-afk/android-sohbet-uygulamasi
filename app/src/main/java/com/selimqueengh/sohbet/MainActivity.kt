@@ -2,183 +2,116 @@ package com.selimqueengh.sohbet
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.selimqueengh.sohbet.chat.ChatManager
-import kotlinx.coroutines.*
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.selimqueengh.sohbet.models.User
 
-class MainActivity : AppCompatActivity(), ChatManager.ChatListener {
+class MainActivity : AppCompatActivity() {
     
     private lateinit var recyclerView: RecyclerView
-    private lateinit var messageEditText: EditText
-    private lateinit var sendButton: Button
-    private lateinit var statusText: TextView
-    private lateinit var messageAdapter: MessageAdapter
-    private val messageList = mutableListOf<Message>()
-    private val chatManager = ChatManager.getInstance(this)
+    private lateinit var fabAddFriend: FloatingActionButton
+    private lateinit var chatAdapter: ChatAdapter
+    private val chatList = mutableListOf<ChatItem>()
     private var currentUsername: String = ""
-    private var isTyping = false
-    private var typingJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main_new)
+        setContentView(R.layout.activity_main)
 
         currentUsername = intent.getStringExtra("username") ?: "Kullanıcı"
         
         initViews()
         setupRecyclerView()
         setupClickListeners()
-        setupChatManager()
         
-        // Örnek mesajlar ekle
-        addSampleMessages()
+        // Örnek sohbetler ekle
+        addSampleChats()
     }
 
     private fun initViews() {
-        recyclerView = findViewById(R.id.recyclerViewMessages)
-        messageEditText = findViewById(R.id.editTextMessage)
-        sendButton = findViewById(R.id.buttonSend)
-        statusText = findViewById(R.id.statusText)
+        recyclerView = findViewById(R.id.recyclerViewChats)
+        fabAddFriend = findViewById(R.id.fabAddFriend)
+        
+        // Toolbar'ı ayarla
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
     }
 
     private fun setupRecyclerView() {
-        messageAdapter = MessageAdapter(messageList)
+        chatAdapter = ChatAdapter(chatList) { chatItem ->
+            // Sohbete git
+            val intent = Intent(this, ChatActivity::class.java)
+            intent.putExtra("chat_partner", chatItem.username)
+            intent.putExtra("chat_id", chatItem.chatId)
+            startActivity(intent)
+        }
         recyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
-            adapter = messageAdapter
+            adapter = chatAdapter
         }
     }
 
     private fun setupClickListeners() {
-        sendButton.setOnClickListener {
-            sendMessage()
+        fabAddFriend.setOnClickListener {
+            // Arkadaş ekleme ekranına git
+            val intent = Intent(this, FriendsActivity::class.java)
+            startActivity(intent)
         }
-        
-        // Typing indicator
-        messageEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                handleTyping(s?.toString()?.isNotEmpty() == true)
-            }
-        })
     }
     
-    private fun setupChatManager() {
-        chatManager.addChatListener(this)
-        chatManager.connect(currentUsername)
-    }
-    
-    private fun handleTyping(isTyping: Boolean) {
-        if (this.isTyping != isTyping) {
-            this.isTyping = isTyping
-            chatManager.sendTypingStatus(isTyping)
-        }
-        
-        // Typing timeout
-        typingJob?.cancel()
-        if (isTyping) {
-            typingJob = CoroutineScope(Dispatchers.Main).launch {
-                delay(3000) // 3 saniye sonra typing durumunu kapat
-                this@MainActivity.isTyping = false
-                chatManager.sendTypingStatus(false)
-            }
-        }
-    }
-
-    private fun sendMessage() {
-        val messageText = messageEditText.text.toString().trim()
-        if (messageText.isNotEmpty()) {
-            chatManager.sendMessage(messageText)
-            messageEditText.text.clear()
-        }
-    }
-
-    private fun addSampleMessages() {
-        val sampleMessages = listOf(
-            Message(
-                id = "1",
-                text = "Merhaba! Nasılsın?",
-                sender = "Ahmet",
-                isSentByUser = false,
-                timestamp = System.currentTimeMillis() - 300000
+    private fun addSampleChats() {
+        val sampleChats = listOf(
+            ChatItem(
+                chatId = "1",
+                username = "Ahmet Yılmaz",
+                lastMessage = "Merhaba! Nasılsın?",
+                timestamp = System.currentTimeMillis() - 300000,
+                unreadCount = 2,
+                isOnline = true
             ),
-            Message(
-                id = "2",
-                text = "İyiyim, teşekkürler! Sen nasılsın?",
-                sender = currentUsername,
-                isSentByUser = true,
-                timestamp = System.currentTimeMillis() - 240000
+            ChatItem(
+                chatId = "2", 
+                username = "Ayşe Demir",
+                lastMessage = "Toplantı saat kaçta?",
+                timestamp = System.currentTimeMillis() - 600000,
+                unreadCount = 0,
+                isOnline = false
             ),
-            Message(
-                id = "3",
-                text = "Ben de iyiyim. Bu uygulamayı test ediyoruz.",
-                sender = "Ayşe",
-                isSentByUser = false,
-                timestamp = System.currentTimeMillis() - 180000
-            ),
-            Message(
-                id = "4",
-                text = "Harika! Çok güzel çalışıyor.",
-                sender = currentUsername,
-                isSentByUser = true,
-                timestamp = System.currentTimeMillis() - 120000
+            ChatItem(
+                chatId = "3",
+                username = "Mehmet Kaya", 
+                lastMessage = "Dosyayı gönderdim",
+                timestamp = System.currentTimeMillis() - 900000,
+                unreadCount = 1,
+                isOnline = true
             )
         )
         
-        messageList.addAll(sampleMessages)
-        messageAdapter.notifyDataSetChanged()
+        chatList.addAll(sampleChats)
+        chatAdapter.notifyDataSetChanged()
     }
-    
-    // ChatManager.ChatListener implementations
-    override fun onMessageReceived(message: Message) {
-        runOnUiThread {
-            messageList.add(message)
-            messageAdapter.notifyItemInserted(messageList.size - 1)
-            recyclerView.scrollToPosition(messageList.size - 1)
-        }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
     }
-    
-    override fun onConnectionStatusChanged(isConnected: Boolean) {
-        runOnUiThread {
-            statusText.text = if (isConnected) "Çevrimiçi" else "Bağlantı kesildi"
-            statusText.setTextColor(
-                if (isConnected) getColor(R.color.online_color) 
-                else getColor(R.color.offline_color)
-            )
-        }
-    }
-    
-    override fun onTypingStatusChanged(username: String, isTyping: Boolean, recipient: String?) {
-        runOnUiThread {
-            if (isTyping) {
-                statusText.text = "$username yazıyor..."
-            } else {
-                statusText.text = "Çevrimiçi"
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_profile -> {
+                // Profil ekranına git
+                true
             }
+            R.id.action_settings -> {
+                // Ayarlar ekranına git
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
-    }
-    
-    override fun onUserListUpdated(users: List<com.selimqueengh.sohbet.models.User>) {
-        // Kullanıcı listesi güncellendi
-    }
-    
-    override fun onUserStatusChanged() {
-        // Kullanıcı durumu değişti
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        chatManager.removeChatListener(this)
-        chatManager.disconnect()
-        typingJob?.cancel()
     }
 }
