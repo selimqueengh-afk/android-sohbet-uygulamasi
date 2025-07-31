@@ -12,8 +12,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.ChatActivity
 import com.selimqueengh.sohbet.FriendsAdapter
 import com.selimqueengh.sohbet.R
-
-data class Friend(val name: String, val status: String, val avatar: String)
+import com.selimqueengh.sohbet.models.Friend
 
 class FriendsFragment : Fragment() {
     

@@ -3,7 +3,6 @@
     <!-- Bottom Navigation Colors -->
     <color name="bottom_nav_selected">#6200EA</color>
     <color name="bottom_nav_unselected">#999999</color>
-    <color name="surface_color">#FFFFFF</color>
     <color name="divider">#E0E0E0</color>
     <color name="green">#4CAF50</color>
 </resources>

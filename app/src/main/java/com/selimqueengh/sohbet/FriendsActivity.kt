@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.selimqueengh.sohbet.models.Friend
 
 class FriendsActivity : AppCompatActivity() {
     
@@ -75,9 +76,3 @@ class FriendsActivity : AppCompatActivity() {
         friendsAdapter.notifyItemInserted(friendsList.size - 1)
     }
 }
-
-data class Friend(
-    val name: String,
-    val status: String,
-    val avatar: String
-)
