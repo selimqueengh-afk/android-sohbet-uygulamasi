@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
     
+    <!-- Hardware features -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
@@ -28,11 +29,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity 
-            android:name=".MainActivityNew"
-            android:exported="false"
-            android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
 
         <activity 
             android:name=".MainActivity"
