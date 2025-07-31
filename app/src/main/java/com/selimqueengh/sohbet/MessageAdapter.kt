@@ -40,21 +40,12 @@ class MessageAdapter(private val messages: List<Message>) :
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageText: TextView = itemView.findViewById(R.id.textViewMessage)
         private val messageTime: TextView = itemView.findViewById(R.id.textViewTime)
-        private val senderText: TextView? = itemView.findViewById(R.id.textViewSender)
 
         fun bind(message: Message) {
             messageText.text = message.text
             
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             messageTime.text = timeFormat.format(Date(message.timestamp))
-            
-            // Gönderen adını göster (sadece diğer kullanıcılar için)
-            if (!message.isSentByUser && senderText != null) {
-                senderText.text = message.sender
-                senderText.visibility = View.VISIBLE
-            } else if (senderText != null) {
-                senderText.visibility = View.GONE
-            }
         }
     }
 }
