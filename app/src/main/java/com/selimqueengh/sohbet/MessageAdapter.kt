@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MessageAdapter(private val messages: List<Message>) : 
+class MessageAdapter(private var messages: List<Message>) : 
     RecyclerView.Adapter<MessageAdapter.MessageViewHolder>() {
 
     companion object {
@@ -36,6 +36,11 @@ class MessageAdapter(private val messages: List<Message>) :
     }
 
     override fun getItemCount(): Int = messages.size
+    
+    fun updateMessages(newMessages: List<Message>) {
+        messages = newMessages
+        notifyDataSetChanged()
+    }
 
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageText: TextView = itemView.findViewById(R.id.textViewMessage)

@@ -7,5 +7,6 @@ data class ChatItem(
     val timestamp: Long,
     val unreadCount: Int = 0,
     val isOnline: Boolean = false,
-    val profileImage: String? = null
+    val profileImage: String? = null,
+    val receiverId: String = ""
 )
