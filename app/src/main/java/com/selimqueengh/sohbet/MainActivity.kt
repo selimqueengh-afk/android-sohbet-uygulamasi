@@ -29,7 +29,7 @@ class MainActivity : AppCompatActivity(), ChatManager.ChatListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_main_new)
 
         currentUsername = intent.getStringExtra("username") ?: "Kullanıcı"
         
