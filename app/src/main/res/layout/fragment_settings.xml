@@ -47,7 +47,7 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_dark_mode"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/text_primary" />
+                        app:tint="@color/text_primary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -122,7 +122,7 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_notifications"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/text_primary" />
+                        app:tint="@color/text_primary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -150,7 +150,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/text_secondary" />
+                        app:tint="@color/text_secondary" />
 
                 </LinearLayout>
 
@@ -170,7 +170,7 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_privacy"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/text_primary" />
+                        app:tint="@color/text_primary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -198,7 +198,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/text_secondary" />
+                        app:tint="@color/text_secondary" />
 
                 </LinearLayout>
 
@@ -245,7 +245,7 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_info"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/text_primary" />
+                        app:tint="@color/text_primary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -273,7 +273,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/text_secondary" />
+                        app:tint="@color/text_secondary" />
 
                 </LinearLayout>
 
@@ -293,7 +293,7 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_logout"
                         android:layout_marginEnd="16dp"
-                        android:tint="@color/delete_color" />
+                        app:tint="@color/delete_color" />
 
                     <TextView
                         android:layout_width="wrap_content"
