@@ -84,22 +84,12 @@ class MainActivityNew : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
+        // Menu removed as requested
+        return false
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_profile -> {
-                bottomNavigation.selectedItemId = R.id.nav_profile
-                true
-            }
-            R.id.action_settings -> {
-                // TODO: Implement settings
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onBackPressed() {
