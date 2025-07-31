@@ -11,12 +11,12 @@
         android:title="Arkadaşlar" />
     
     <item
-        android:id="@+id/nav_calls"
-        android:icon="@drawable/ic_call"
-        android:title="Aramalar" />
-    
-    <item
         android:id="@+id/nav_profile"
         android:icon="@drawable/ic_person"
         android:title="Profil" />
+    
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="Ayarlar" />
 </menu>

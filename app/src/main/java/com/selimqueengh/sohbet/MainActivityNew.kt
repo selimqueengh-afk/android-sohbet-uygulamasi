@@ -8,10 +8,10 @@ import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.selimqueengh.sohbet.fragments.CallsFragment
 import com.selimqueengh.sohbet.fragments.ChatsFragment
 import com.selimqueengh.sohbet.fragments.FriendsFragment
 import com.selimqueengh.sohbet.fragments.ProfileFragment
+import com.selimqueengh.sohbet.fragments.SettingsFragment
 
 class MainActivityNew : AppCompatActivity() {
     
@@ -54,9 +54,9 @@ class MainActivityNew : AppCompatActivity() {
                     supportActionBar?.title = "Arkadaşlar"
                     true
                 }
-                R.id.nav_calls -> {
-                    replaceFragment(CallsFragment())
-                    supportActionBar?.title = "Aramalar"
+                R.id.nav_settings -> {
+                    replaceFragment(SettingsFragment())
+                    supportActionBar?.title = "Ayarlar"
                     true
                 }
                 R.id.nav_profile -> {
