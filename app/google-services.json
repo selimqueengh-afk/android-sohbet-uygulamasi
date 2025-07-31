@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "702965020268",
+    "project_id": "gercekandroid",
+    "storage_bucket": "gercekandroid.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:702965020268:android:0192f512976ff05c2bca49",
+        "android_client_info": {
+          "package_name": "com.selimqueengh.sohbet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGF6O6JcEPlc4MmMlXRaA63orjb_QN06s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
