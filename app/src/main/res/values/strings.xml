@@ -1,5 +1,18 @@
 <resources>
-    <string name="app_name">Sohbet Uygulaması</string>
+    <string name="app_name">SnickersChatv4</string>
     <string name="send">Gönder</string>
     <string name="hint_message">Mesajınızı yazın</string>
+    <string name="login_title">SnickersChatv4\'e Hoş Geldiniz</string>
+    <string name="username_hint">Kullanıcı adınızı girin</string>
+    <string name="enter_chat">Sohbete Gir</string>
+    <string name="online">Çevrimiçi</string>
+    <string name="offline">Çevrimdışı</string>
+    <string name="typing">yazıyor...</string>
+    <string name="copy_message">Mesajı Kopyala</string>
+    <string name="delete_message">Mesajı Sil</string>
+    <string name="add_friend">Arkadaş Ekle</string>
+    <string name="friends">Arkadaşlar</string>
+    <string name="chats">Sohbetler</string>
+    <string name="profile">Profil</string>
+    <string name="settings">Ayarlar</string>
 </resources>

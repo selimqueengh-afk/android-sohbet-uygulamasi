@@ -1,15 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary_color">#2196F3</color>
-    <color name="primary_dark">#1976D2</color>
-    <color name="accent_color">#03DAC5</color>
+    <!-- SnickersChatv4 Primary Colors -->
+    <color name="primary_color">#6C63FF</color>
+    <color name="primary_dark">#5848C2</color>
+    <color name="primary_light">#8B7EFF</color>
+    <color name="accent_color">#FF6B6B</color>
     
-    <color name="background_color">#F5F5F5</color>
-    <color name="input_background">#FFFFFF</color>
+    <!-- Background Colors -->
+    <color name="background_color">#F8F9FA</color>
+    <color name="surface_color">#FFFFFF</color>
+    <color name="input_background">#F1F3F4</color>
+    <color name="card_background">#FFFFFF</color>
     
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
+    <!-- Text Colors -->
+    <color name="text_primary">#1F2937</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="text_hint">#9CA3AF</color>
+    <color name="text_on_primary">#FFFFFF</color>
     
-    <color name="message_user_background">#2196F3</color>
-    <color name="message_other_background">#E0E0E0</color>
+    <!-- Message Colors -->
+    <color name="message_user_background">#6C63FF</color>
+    <color name="message_other_background">#E5E7EB</color>
+    <color name="message_user_text">#FFFFFF</color>
+    <color name="message_other_text">#1F2937</color>
+    
+    <!-- Status Colors -->
+    <color name="online_color">#10B981</color>
+    <color name="offline_color">#6B7280</color>
+    <color name="typing_color">#F59E0B</color>
+    
+    <!-- Action Colors -->
+    <color name="delete_color">#EF4444</color>
+    <color name="copy_color">#3B82F6</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#667eea</color>
+    <color name="gradient_end">#764ba2</color>
+    
+    <!-- Dark Mode Support -->
+    <color name="dark_background">#111827</color>
+    <color name="dark_surface">#1F2937</color>
+    <color name="dark_text_primary">#F9FAFB</color>
 </resources>
