@@ -84,8 +84,8 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_profile -> {
-                    // TODO: Add profile activity
-                    Toast.makeText(this, "Profil yakında gelecek", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, TestUsersActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 else -> false
