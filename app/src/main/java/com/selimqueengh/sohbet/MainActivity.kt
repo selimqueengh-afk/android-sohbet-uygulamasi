@@ -12,7 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.selimqueengh.sohbet.models.Friend
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.services.FirebaseService
 import kotlinx.coroutines.launch
@@ -80,48 +79,52 @@ class MainActivity : AppCompatActivity() {
                     // First get friends
                     val friendsResult = firebaseService.getFriends(currentUserId)
                     if (friendsResult.isSuccess) {
-                        val friends = friendsResult.getOrNull() ?: emptyList()
+                        val friendsData = friendsResult.getOrNull() ?: emptyList()
                         
                         // Then get chats for each friend
                         val chats = mutableListOf<ChatItem>()
-                        for (friend in friends) {
-                            // Get user info for friend name
-                            val userResult = firebaseService.getUsers()
-                            if (userResult.isSuccess) {
-                                val users = userResult.getOrNull() ?: emptyList()
-                                val friendUser = users.find { it.username == friend.name }
-                                
-                                if (friendUser != null) {
-                                    val chatResult = firebaseService.getChats(currentUserId)
-                                    if (chatResult.isSuccess) {
-                                        val userChats = chatResult.getOrNull() ?: emptyList()
-                                        val friendChat = userChats.find { chatData ->
-                                            val otherUserId = if (chatData["user1Id"] == currentUserId) {
-                                                chatData["user2Id"] as? String ?: ""
-                                            } else {
-                                                chatData["user1Id"] as? String ?: ""
-                                            }
-                                            otherUserId == friendUser.id
-                                        }
-                                        
-                                        if (friendChat != null) {
-                                            val otherUserId = if (friendChat["user1Id"] == currentUserId) {
-                                                friendChat["user2Id"] as? String ?: ""
-                                            } else {
-                                                friendChat["user1Id"] as? String ?: ""
+                        for (friendData in friendsData) {
+                            val friendId = friendData["friendId"] as? String ?: ""
+                            
+                            if (friendId.isNotEmpty()) {
+                                // Get user info for friend
+                                val userResult = firebaseService.getUsers()
+                                if (userResult.isSuccess) {
+                                    val users = userResult.getOrNull() ?: emptyList()
+                                    val friendUser = users.find { it.id == friendId }
+                                    
+                                    if (friendUser != null) {
+                                        val chatResult = firebaseService.getChats(currentUserId)
+                                        if (chatResult.isSuccess) {
+                                            val userChats = chatResult.getOrNull() ?: emptyList()
+                                            val friendChat = userChats.find { chatData ->
+                                                val otherUserId = if (chatData["user1Id"] == currentUserId) {
+                                                    chatData["user2Id"] as? String ?: ""
+                                                } else {
+                                                    chatData["user1Id"] as? String ?: ""
+                                                }
+                                                otherUserId == friendId
                                             }
                                             
-                                            val otherUser = users.find { it.id == otherUserId }
-                                            
-                                            val chatItem = ChatItem(
-                                                chatId = friendChat["chatId"] as? String ?: "",
-                                                username = otherUser?.username ?: friend.name,
-                                                lastMessage = friendChat["lastMessageContent"] as? String ?: "Henüz mesaj yok",
-                                                timestamp = (friendChat["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
-                                                unreadCount = 0,
-                                                isOnline = otherUser?.isOnline ?: false
-                                            )
-                                            chats.add(chatItem)
+                                            if (friendChat != null) {
+                                                val otherUserId = if (friendChat["user1Id"] == currentUserId) {
+                                                    friendChat["user2Id"] as? String ?: ""
+                                                } else {
+                                                    friendChat["user1Id"] as? String ?: ""
+                                                }
+                                                
+                                                val otherUser = users.find { it.id == otherUserId }
+                                                
+                                                val chatItem = ChatItem(
+                                                    chatId = friendChat["chatId"] as? String ?: "",
+                                                    username = otherUser?.username ?: friendUser.username,
+                                                    lastMessage = friendChat["lastMessageContent"] as? String ?: "Henüz mesaj yok",
+                                                    timestamp = (friendChat["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
+                                                    unreadCount = 0,
+                                                    isOnline = otherUser?.isOnline ?: false
+                                                )
+                                                chats.add(chatItem)
+                                            }
                                         }
                                     }
                                 }
