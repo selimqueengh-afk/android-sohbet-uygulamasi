@@ -67,7 +67,7 @@ class FriendRequestsActivity : AppCompatActivity() {
         if (currentUserId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
-                    val result = firebaseService.getFriendRequests(currentUserId)
+                    val result = firebaseService.getIncomingFriendRequests(currentUserId)
                     if (result.isSuccess) {
                         val requestsData = result.getOrNull() ?: emptyList()
                         requestsList.clear()
@@ -78,7 +78,7 @@ class FriendRequestsActivity : AppCompatActivity() {
                             val users = userResult.getOrNull() ?: emptyList()
                             
                             requestsData.forEach { requestData ->
-                                val senderId = requestData["userId"] as? String ?: ""
+                                val senderId = requestData["fromUserId"] as? String ?: ""
                                 val senderUser = users.find { it.id == senderId }
                                 
                                 if (senderUser != null) {
@@ -86,7 +86,7 @@ class FriendRequestsActivity : AppCompatActivity() {
                                         requestId = requestData["requestId"] as? String ?: "",
                                         senderId = senderId,
                                         senderUsername = senderUser.username,
-                                        timestamp = (requestData["createdAt"] as? java.util.Date)?.time ?: System.currentTimeMillis()
+                                        timestamp = (requestData["timestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis()
                                     )
                                     requestsList.add(request)
                                 }

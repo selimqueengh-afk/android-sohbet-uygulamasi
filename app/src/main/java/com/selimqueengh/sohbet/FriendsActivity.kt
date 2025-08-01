@@ -173,7 +173,7 @@ class FriendsActivity : AppCompatActivity() {
     private fun sendFriendRequest(friendId: String, callback: () -> Unit) {
         lifecycleScope.launch {
             try {
-                val result = firebaseService.addFriend(currentUserId, friendId)
+                val result = firebaseService.addFriendRequest(currentUserId, friendId)
                 if (result.isSuccess) {
                     runOnUiThread {
                         callback()
@@ -227,27 +227,16 @@ class FriendsActivity : AppCompatActivity() {
                 try {
                     val result = firebaseService.getFriends(currentUserId)
                     if (result.isSuccess) {
-                        val friendsData = result.getOrNull() ?: emptyList()
+                        val friends = result.getOrNull() ?: emptyList()
                         friendsList.clear()
                         
-                        // Get user details for each friend
-                        val userResult = firebaseService.getUsers()
-                        if (userResult.isSuccess) {
-                            val users = userResult.getOrNull() ?: emptyList()
-                            
-                            friendsData.forEach { friendData ->
-                                val friendId = friendData["friendId"] as? String ?: ""
-                                val friendUser = users.find { it.id == friendId }
-                                
-                                if (friendUser != null) {
-                                    val friend = Friend(
-                                        name = friendUser.username,
-                                        status = if (friendUser.isOnline) "Online" else "Offline",
-                                        avatar = "avatar_default"
-                                    )
-                                    friendsList.add(friend)
-                                }
-                            }
+                        friends.forEach { friendUser ->
+                            val friend = Friend(
+                                name = friendUser.username,
+                                status = if (friendUser.isOnline) "Online" else "Offline",
+                                avatar = "avatar_default"
+                            )
+                            friendsList.add(friend)
                         }
                         
                         friendsAdapter.notifyDataSetChanged()
