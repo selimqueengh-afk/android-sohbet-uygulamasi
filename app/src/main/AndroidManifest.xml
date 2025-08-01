@@ -56,6 +56,11 @@
             android:exported="false"
             android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
 
+        <activity 
+            android:name=".TestActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
+
         <!-- Firebase Messaging Service -->
         <service
             android:name=".services.FirebaseMessagingService"
