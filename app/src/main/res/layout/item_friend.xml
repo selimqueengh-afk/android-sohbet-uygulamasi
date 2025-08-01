@@ -1,66 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:background="?android:attr/selectableItemBackground"
-    android:clickable="true"
-    android:focusable="true">
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/surface_color">
 
-    <!-- Avatar Placeholder -->
-    <View
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:background="@drawable/avatar_background"
-        android:layout_marginEnd="12dp" />
-
-    <!-- Friend Info -->
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
 
-        <TextView
-            android:id="@+id/friendNameText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Arkadaş Adı"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/black" />
+        <!-- Avatar -->
+        <LinearLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/avatar_background"
+            android:gravity="center"
+            android:layout_marginEnd="16dp">
 
-        <TextView
-            android:id="@+id/friendStatusText"
-            android:layout_width="wrap_content"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👤"
+                android:textSize="24sp" />
+
+        </LinearLayout>
+
+        <!-- Friend Info -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Online"
-            android:textSize="14sp"
-            android:textColor="@color/gray"
-            android:layout_marginTop="2dp" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/friendNameText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Arkadaş Adı"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/friendStatusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Online"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- Online Indicator -->
+        <View
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:background="@drawable/online_indicator"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Delete Button -->
+        <ImageButton
+            android:id="@+id/deleteFriendButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_delete"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Arkadaşı Sil"
+            android:layout_gravity="center_vertical"
+            android:padding="6dp"
+            app:tint="@color/delete_color" />
 
     </LinearLayout>
 
-    <!-- Online Indicator -->
-    <View
-        android:layout_width="8dp"
-        android:layout_height="8dp"
-        android:background="@drawable/online_indicator"
-        android:layout_gravity="center_vertical"
-        android:layout_marginEnd="8dp" />
-
-    <!-- Delete Button -->
-    <ImageButton
-        android:id="@+id/deleteFriendButton"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:src="@drawable/ic_delete"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Arkadaşı Sil"
-        android:layout_gravity="center_vertical"
-        android:padding="4dp"
-        app:tint="@color/delete_color" />
-
-</LinearLayout>
+</androidx.cardview.widget.CardView>

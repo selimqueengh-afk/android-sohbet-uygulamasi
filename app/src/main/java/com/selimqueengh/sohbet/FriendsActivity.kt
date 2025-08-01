@@ -206,22 +206,23 @@ class FriendsActivity : AppCompatActivity() {
     }
 
     private fun openChatWithFriend(friend: Friend) {
-        // Create or get existing chat
+        // Get friend user and create Realtime Database chat
         lifecycleScope.launch {
             try {
                 val friendUser = getFriendUser(friend.name)
                 if (friendUser != null) {
-                    val chatResult = firebaseService.createChat(currentUserId, friendUser.id)
-                    if (chatResult.isSuccess) {
-                        val chatId = chatResult.getOrNull() ?: ""
-                        val intent = Intent(this@FriendsActivity, ChatActivity::class.java)
-                        intent.putExtra("chat_partner", friend.name)
-                        intent.putExtra("chat_id", chatId)
-                        startActivity(intent)
-                    }
+                    // Create Realtime Database chat
+                    val chatId = firebaseService.createRealtimeChat(currentUserId, friendUser.id)
+                    
+                    val intent = Intent(this@FriendsActivity, ChatActivity::class.java)
+                    intent.putExtra("chat_partner", friend.name)
+                    intent.putExtra("chat_id", chatId)
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@FriendsActivity, "Kullanıcı bulunamadı", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@FriendsActivity, "Sohbet açılamadı", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@FriendsActivity, "Sohbet açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
