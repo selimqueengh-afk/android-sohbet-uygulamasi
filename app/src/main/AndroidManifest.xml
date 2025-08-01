@@ -31,10 +31,7 @@
             </intent-filter>
         </activity>
 
-        <activity 
-            android:name=".MainActivityNew"
-            android:exported="false"
-            android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
+
 
         <activity 
             android:name=".MainActivity"
