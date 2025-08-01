@@ -238,97 +238,50 @@ class FirebaseService {
         }
     }
 
-    // Friends management
-    suspend fun addFriend(userId: String, friendId: String): Result<Unit> {
+    // FRIEND REQUEST SYSTEM (friend_requests collection)
+    private val FRIEND_REQUESTS_COLLECTION = "friend_requests"
+
+    suspend fun addFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {
         return try {
-            val friendData = hashMapOf(
-                "userId" to userId,
-                "friendId" to friendId,
+            val requestData = hashMapOf(
+                "fromUserId" to fromUserId,
+                "toUserId" to toUserId,
                 "status" to "pending",
-                "createdAt" to Date()
+                "timestamp" to Date()
             )
-            
-            firestore.collection(FRIENDS_COLLECTION)
-                .add(friendData)
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .add(requestData)
                 .await()
-            
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding friend", e)
+            Log.e(TAG, "Error sending friend request", e)
             Result.failure(e)
         }
     }
 
-    suspend fun getFriends(userId: String): Result<List<Map<String, Any>>> {
+    suspend fun getIncomingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
         return try {
-            val snapshot = firestore.collection(FRIENDS_COLLECTION)
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("status", "accepted")
-                .get()
-                .await()
-            
-            val friends = snapshot.documents.map { doc ->
-                doc.data?.toMutableMap()?.apply {
-                    put("friendId", doc.id)
-                } ?: mutableMapOf()
-            }
-            
-            Result.success(friends)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting friends", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getFriendRequests(userId: String): Result<List<Map<String, Any>>> {
-        return try {
-            val snapshot = firestore.collection(FRIENDS_COLLECTION)
-                .whereEqualTo("friendId", userId)
+            val snapshot = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("toUserId", userId)
                 .whereEqualTo("status", "pending")
                 .get()
                 .await()
-            
             val requests = snapshot.documents.map { doc ->
-                doc.data?.toMutableMap()?.apply {
-                    put("requestId", doc.id)
-                } ?: mutableMapOf()
+                doc.data?.toMutableMap()?.apply { put("requestId", doc.id) } ?: mutableMapOf()
             }
-            
             Result.success(requests)
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting friend requests", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getPendingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
-        return try {
-            val snapshot = firestore.collection(FRIENDS_COLLECTION)
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("status", "pending")
-                .get()
-                .await()
-            
-            val requests = snapshot.documents.map { doc ->
-                doc.data?.toMutableMap()?.apply {
-                    put("requestId", doc.id)
-                } ?: mutableMapOf()
-            }
-            
-            Result.success(requests)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting pending friend requests", e)
+            Log.e(TAG, "Error getting incoming friend requests", e)
             Result.failure(e)
         }
     }
 
     suspend fun acceptFriendRequest(requestId: String): Result<Unit> {
         return try {
-            firestore.collection(FRIENDS_COLLECTION)
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .document(requestId)
                 .update("status", "accepted")
                 .await()
-            
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error accepting friend request", e)
@@ -338,14 +291,37 @@ class FirebaseService {
 
     suspend fun rejectFriendRequest(requestId: String): Result<Unit> {
         return try {
-            firestore.collection(FRIENDS_COLLECTION)
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .document(requestId)
                 .delete()
                 .await()
-            
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error rejecting friend request", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFriends(userId: String): Result<List<User>> {
+        return try {
+            val accepted1 = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("fromUserId", userId)
+                .whereEqualTo("status", "accepted")
+                .get().await()
+            val accepted2 = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("toUserId", userId)
+                .whereEqualTo("status", "accepted")
+                .get().await()
+            val userIds = (accepted1.documents.mapNotNull { it.getString("toUserId") } +
+                           accepted2.documents.mapNotNull { it.getString("fromUserId") }).distinct()
+            val users = mutableListOf<User>()
+            for (id in userIds) {
+                val userDoc = firestore.collection(USERS_COLLECTION).document(id).get().await()
+                userDoc.toObject(User::class.java)?.copy(id = userDoc.id)?.let { users.add(it) }
+            }
+            Result.success(users)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting friends", e)
             Result.failure(e)
         }
     }
