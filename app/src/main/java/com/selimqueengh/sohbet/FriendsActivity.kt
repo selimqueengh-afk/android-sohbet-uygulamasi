@@ -173,7 +173,7 @@ class FriendsActivity : AppCompatActivity() {
     private fun sendFriendRequest(friendId: String, callback: () -> Unit) {
         lifecycleScope.launch {
             try {
-                val result = firebaseService.addFriendRequest(currentUserId, friendId)
+                val result = firebaseService.sendFriendRequest(currentUserId, friendId)
                 if (result.isSuccess) {
                     runOnUiThread {
                         callback()

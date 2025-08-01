@@ -61,6 +61,11 @@
             android:exported="false"
             android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
 
+        <activity 
+            android:name=".SetupFirestoreActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SnickersChatv4.NoActionBar" />
+
         <!-- Firebase Messaging Service -->
         <service
             android:name=".services.FirebaseMessagingService"
