@@ -133,6 +133,18 @@ class ChatActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     Log.d("ChatActivity", "Loading messages for chatId: $chatId")
+                    Log.d("ChatActivity", "Current user ID: $currentUserId")
+                    Log.d("ChatActivity", "Current username: $currentUsername")
+                    
+                    // Check if user is authenticated
+                    val currentUser = firebaseService.getCurrentUser()
+                    if (currentUser == null) {
+                        Log.e("ChatActivity", "User not authenticated")
+                        Toast.makeText(this@ChatActivity, "Kullanıcı girişi yapılmamış", Toast.LENGTH_SHORT).show()
+                        addSampleMessages()
+                        return@launch
+                    }
+                    
                     val result = firebaseService.getMessages(chatId)
                     if (result.isSuccess) {
                         val messages = result.getOrNull() ?: emptyList()
@@ -158,8 +170,9 @@ class ChatActivity : AppCompatActivity() {
                             recyclerView.scrollToPosition(messageList.size - 1)
                         }
                     } else {
-                        Log.e("ChatActivity", "Failed to load messages: ${result.exceptionOrNull()}")
-                        Toast.makeText(this@ChatActivity, "Mesajlar yüklenemedi: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                        val error = result.exceptionOrNull()
+                        Log.e("ChatActivity", "Failed to load messages: $error")
+                        Toast.makeText(this@ChatActivity, "Mesajlar yüklenemedi: ${error?.message}", Toast.LENGTH_SHORT).show()
                         // Fallback to sample messages
                         addSampleMessages()
                     }

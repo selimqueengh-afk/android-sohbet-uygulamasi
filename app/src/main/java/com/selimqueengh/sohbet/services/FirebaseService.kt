@@ -524,12 +524,23 @@ class FirebaseService {
 
     suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<ChatMessage>> {
         return try {
+            // Check authentication first
+            val currentUser = auth.currentUser
+            if (currentUser == null) {
+                Log.e(TAG, "User not authenticated")
+                return Result.failure(Exception("Kullanıcı girişi yapılmamış"))
+            }
+            
+            Log.d(TAG, "Getting messages for chatId: $chatId, user: ${currentUser.uid}")
+            
             val snapshot = firestore.collection(MESSAGES_COLLECTION)
                 .whereEqualTo("chatId", chatId)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit)
                 .get()
                 .await()
+            
+            Log.d(TAG, "Found ${snapshot.documents.size} messages in Firestore")
             
             val messages = snapshot.documents.mapNotNull { doc ->
                 val data = doc.data
@@ -558,6 +569,7 @@ class FirebaseService {
                 } else null
             }.reversed()
             
+            Log.d(TAG, "Processed ${messages.size} messages")
             Result.success(messages)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting messages", e)
