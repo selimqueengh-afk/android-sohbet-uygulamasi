@@ -60,7 +60,7 @@ class ChatsFragment : Fragment() {
         if (currentUserId.isNotEmpty()) {
             val firebaseService = com.selimqueengh.sohbet.services.FirebaseService()
             
-            androidx.lifecycle.lifecycleScope.launch {
+            lifecycleScope.launch {
                 try {
                     val result = firebaseService.getChats(currentUserId)
                     if (result.isSuccess) {
