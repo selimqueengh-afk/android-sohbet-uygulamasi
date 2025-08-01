@@ -81,8 +81,8 @@
                 style="@style/ModernTextInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:hint="@string/username_hint"
+                android:layout_marginBottom="16dp"
+                android:hint="Kullanıcı Adı"
                 app:startIconDrawable="@drawable/ic_person"
                 app:endIconMode="clear_text">
 
@@ -97,14 +97,43 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/passwordLayout"
+                style="@style/ModernTextInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:hint="Şifre"
+                app:startIconDrawable="@drawable/ic_lock"
+                app:endIconMode="password_toggle">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/passwordEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:textSize="16sp"
+                    android:textColor="@color/text_primary" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/loginButton"
                 style="@style/PrimaryButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="@string/enter_chat"
+                android:text="Giriş Yap"
                 android:enabled="true"
-                android:layout_marginTop="16dp" />
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/registerButton"
+                style="@style/SecondaryButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Kayıt Ol"
+                android:enabled="true" />
 
         </LinearLayout>
 

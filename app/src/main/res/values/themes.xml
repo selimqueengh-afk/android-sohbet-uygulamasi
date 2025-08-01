@@ -54,6 +54,16 @@
         <item name="android:paddingBottom">12dp</item>
     </style>
 
+    <style name="SecondaryButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">@color/primary_color</item>
+        <item name="android:textColor">@color/primary_color</item>
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
     <!-- Text Input Style -->
     <style name="ModernTextInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/primary_color</item>

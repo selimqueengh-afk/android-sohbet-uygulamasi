@@ -7,6 +7,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.Timestamp
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.UserStatus
@@ -25,6 +29,7 @@ class FirebaseService {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
     private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance()
 
     // ===== AUTHENTICATION =====
@@ -35,6 +40,26 @@ class FirebaseService {
             Result.success(result.user!!)
         } catch (e: Exception) {
             Log.e(TAG, "Error signing in anonymously", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun registerWithEmailPassword(email: String, password: String): Result<FirebaseUser> {
+        return try {
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            Result.success(result.user!!)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering with email/password", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithEmailPassword(email: String, password: String): Result<FirebaseUser> {
+        return try {
+            val result = auth.signInWithEmailAndPassword(email, password).await()
+            Result.success(result.user!!)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error signing in with email/password", e)
             Result.failure(e)
         }
     }
@@ -560,5 +585,91 @@ class FirebaseService {
                     onStatusChange(user.copy(id = snapshot.id))
                 }
             }
+    }
+
+    // ===== REALTIME DATABASE MESAJLAŞMA =====
+    
+    fun sendRealtimeMessage(chatId: String, senderId: String, senderUsername: String, content: String, messageType: String = "text") {
+        val messageRef = database.getReference("messages").child(chatId).push()
+        val message = hashMapOf(
+            "senderId" to senderId,
+            "senderUsername" to senderUsername,
+            "content" to content,
+            "messageType" to messageType,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "isDelivered" to false
+        )
+        
+        messageRef.setValue(message).addOnSuccessListener {
+            Log.d(TAG, "Message sent successfully to Realtime Database")
+        }.addOnFailureListener { e ->
+            Log.e(TAG, "Error sending message to Realtime Database", e)
+        }
+    }
+
+    fun listenToRealtimeMessages(chatId: String, onMessage: (Map<String, Any>) -> Unit) {
+        val messagesRef = database.getReference("messages").child(chatId)
+        
+        messagesRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (messageSnapshot in snapshot.children) {
+                    val message = messageSnapshot.value as? Map<String, Any>
+                    message?.let {
+                        val messageWithId = it.toMutableMap()
+                        messageWithId["id"] = messageSnapshot.key ?: ""
+                        onMessage(messageWithId)
+                    }
+                }
+            }
+            
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Error listening to Realtime Database messages", error.toException())
+            }
+        })
+    }
+
+    fun createRealtimeChat(user1Id: String, user2Id: String): String {
+        val chatId = if (user1Id < user2Id) "${user1Id}_${user2Id}" else "${user2Id}_${user1Id}"
+        
+        val chatRef = database.getReference("chats").child(chatId)
+        val chatData = hashMapOf(
+            "participants" to listOf(user1Id, user2Id),
+            "lastMessage" to "",
+            "lastMessageTimestamp" to System.currentTimeMillis(),
+            "createdAt" to System.currentTimeMillis()
+        )
+        
+        chatRef.setValue(chatData)
+        return chatId
+    }
+
+    fun getRealtimeChats(userId: String, onChats: (List<Map<String, Any>>) -> Unit) {
+        val chatsRef = database.getReference("chats")
+        
+        chatsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val chats = mutableListOf<Map<String, Any>>()
+                
+                for (chatSnapshot in snapshot.children) {
+                    val chat = chatSnapshot.value as? Map<String, Any>
+                    chat?.let {
+                        val participants = it["participants"] as? List<String>
+                        if (participants?.contains(userId) == true) {
+                            val chatWithId = it.toMutableMap()
+                            chatWithId["chatId"] = chatSnapshot.key ?: ""
+                            chats.add(chatWithId)
+                        }
+                    }
+                }
+                
+                onChats(chats)
+            }
+            
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Error getting Realtime Database chats", error.toException())
+                onChats(emptyList())
+            }
+        })
     }
 }

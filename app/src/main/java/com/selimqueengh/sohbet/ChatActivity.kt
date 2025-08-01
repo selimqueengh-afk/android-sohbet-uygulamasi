@@ -62,7 +62,7 @@ class ChatActivity : AppCompatActivity() {
             loadMessages()
             
             // Listen for real-time messages
-            setupMessageListener()
+            setupRealtimeMessageListener()
         }
     }
 
@@ -74,17 +74,12 @@ class ChatActivity : AppCompatActivity() {
                 if (partnerResult.isSuccess) {
                     val partnerUser = partnerResult.getOrNull()
                     if (partnerUser != null) {
-                        val chatResult = firebaseService.createChat(currentUserId, partnerUser.id)
-                        if (chatResult.isSuccess) {
-                            chatId = chatResult.getOrNull() ?: ""
-                            Log.d("ChatActivity", "Chat created with ID: $chatId")
-                            
-                            // Now load messages and setup listener
-                            loadMessages()
-                            setupMessageListener()
-                        } else {
-                            Toast.makeText(this@ChatActivity, "Sohbet oluşturulamadı", Toast.LENGTH_SHORT).show()
-                        }
+                        // Create Realtime Database chat
+                        chatId = firebaseService.createRealtimeChat(currentUserId, partnerUser.id)
+                        Log.d("ChatActivity", "Realtime chat created with ID: $chatId")
+                        
+                        // Now setup message listener
+                        setupRealtimeMessageListener()
                     } else {
                         Toast.makeText(this@ChatActivity, "Kullanıcı bulunamadı", Toast.LENGTH_SHORT).show()
                     }
@@ -173,17 +168,17 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupMessageListener() {
-        firebaseService.listenToMessages(chatId) { chatMessage ->
-            // Convert ChatMessage to Message
+    private fun setupRealtimeMessageListener() {
+        firebaseService.listenToRealtimeMessages(chatId) { messageData ->
+            // Convert message data to Message
             val message = Message(
-                text = chatMessage.content,
-                sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
-                isSentByUser = chatMessage.senderId == currentUserId,
-                timestamp = chatMessage.timestamp,
-                messageType = chatMessage.messageType,
-                mediaUrl = chatMessage.mediaUrl,
-                mediaType = chatMessage.mediaType
+                text = messageData["content"] as? String ?: "",
+                sender = if (messageData["senderId"] as? String == currentUserId) "Ben" else messageData["senderUsername"] as? String ?: "",
+                isSentByUser = messageData["senderId"] as? String == currentUserId,
+                timestamp = messageData["timestamp"] as? Long ?: 0,
+                messageType = messageData["messageType"] as? String ?: "text",
+                mediaUrl = messageData["mediaUrl"] as? String ?: "",
+                mediaType = messageData["mediaType"] as? String ?: ""
             )
             
             // Add message to list and update UI
@@ -199,18 +194,8 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
-                lifecycleScope.launch {
-                    try {
-                        val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageText)
-                        if (result.isSuccess) {
-                            messageEditText.text.clear()
-                        } else {
-                            Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
-                        }
-                    } catch (e: Exception) {
-                        Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                firebaseService.sendRealtimeMessage(chatId, currentUserId, currentUsername, messageText)
+                messageEditText.text.clear()
             } else {
                 Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
             }
