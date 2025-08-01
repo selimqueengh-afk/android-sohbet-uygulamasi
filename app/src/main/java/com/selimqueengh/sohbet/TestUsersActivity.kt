@@ -35,8 +35,11 @@ class TestUsersActivity : AppCompatActivity() {
                 resultText.text = "Kullanıcılar listeleniyor..."
                 
                 val result = firebaseService.getUsers()
+                Log.d("TestUsersActivity", "getUsers result: $result")
+                
                 if (result.isSuccess) {
                     val users = result.getOrNull() ?: emptyList()
+                    Log.d("TestUsersActivity", "Found ${users.size} users")
                     
                     val userList = users.joinToString("\n") { user ->
                         "• ${user.username} (ID: ${user.id})"
@@ -55,8 +58,10 @@ class TestUsersActivity : AppCompatActivity() {
                     Toast.makeText(this@TestUsersActivity, "${users.size} kullanıcı bulundu", Toast.LENGTH_SHORT).show()
                     
                 } else {
-                    resultText.text = "❌ Hata: ${result.exceptionOrNull()?.message}"
-                    Toast.makeText(this@TestUsersActivity, "Kullanıcılar yüklenemedi", Toast.LENGTH_SHORT).show()
+                    val error = result.exceptionOrNull()?.message ?: "Bilinmeyen hata"
+                    Log.e("TestUsersActivity", "Failed to get users: $error")
+                    resultText.text = "❌ Hata: $error"
+                    Toast.makeText(this@TestUsersActivity, "Kullanıcılar yüklenemedi: $error", Toast.LENGTH_SHORT).show()
                 }
 
             } catch (e: Exception) {
