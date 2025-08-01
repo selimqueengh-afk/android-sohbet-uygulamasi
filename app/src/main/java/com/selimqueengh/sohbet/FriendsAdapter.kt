@@ -35,7 +35,7 @@ class FriendsAdapter(
             "🟢 Çevrimiçi"
         } else {
             // Son görülme zamanını hesapla
-            val lastSeenText = when (val lastSeen = friend.lastSeen) {
+            when (val lastSeen = friend.lastSeen) {
                 is com.google.firebase.Timestamp -> {
                     val timeDiff = System.currentTimeMillis() - lastSeen.toDate().time
                     when {
@@ -56,7 +56,6 @@ class FriendsAdapter(
                 }
                 else -> "⚫ Çevrimdışı"
             }
-            statusText
         }
         
         holder.statusText.text = statusText

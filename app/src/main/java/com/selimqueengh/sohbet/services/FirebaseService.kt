@@ -72,7 +72,10 @@ class FirebaseService {
         // Çıkış yapmadan önce offline durumuna geç
         val currentUser = auth.currentUser
         if (currentUser != null) {
-            setUserOffline(currentUser.uid)
+            // Suspend function'ı coroutine scope'da çağır
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                setUserOffline(currentUser.uid)
+            }
         }
         auth.signOut()
     }
@@ -760,21 +763,6 @@ class FirebaseService {
                         }
                         else -> {}
                     }
-                }
-            }
-    }
-
-    fun listenToUserStatus(userId: String, onStatusChange: (User) -> Unit) {
-        firestore.collection(USERS_COLLECTION)
-            .document(userId)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    Log.e(TAG, "Error listening to user status", e)
-                    return@addSnapshotListener
-                }
-                
-                snapshot?.toObject(User::class.java)?.let { user ->
-                    onStatusChange(user.copy(id = snapshot.id))
                 }
             }
     }
