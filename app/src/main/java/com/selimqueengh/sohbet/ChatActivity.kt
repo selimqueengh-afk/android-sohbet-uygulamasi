@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.selimqueengh.sohbet.models.Message
+import com.selimqueengh.sohbet.models.ChatMessage
 import com.selimqueengh.sohbet.services.FirebaseService
 import kotlinx.coroutines.launch
 

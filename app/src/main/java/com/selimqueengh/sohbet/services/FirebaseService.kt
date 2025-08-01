@@ -10,6 +10,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.UserStatus
+import com.selimqueengh.sohbet.models.ChatMessage
 import kotlinx.coroutines.tasks.await
 import java.util.*
 
@@ -418,7 +419,7 @@ class FirebaseService {
         }
     }
 
-    suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<Map<String, Any>>> {
+    suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<ChatMessage>> {
         return try {
             val snapshot = firestore.collection(MESSAGES_COLLECTION)
                 .whereEqualTo("chatId", chatId)
@@ -428,7 +429,20 @@ class FirebaseService {
                 .await()
             
             val messages = snapshot.documents.mapNotNull { doc ->
-                doc.data?.toMutableMap()?.apply { put("id", doc.id) }
+                val data = doc.data
+                if (data != null) {
+                    ChatMessage(
+                        id = doc.id,
+                        chatId = data["chatId"] as? String ?: "",
+                        senderId = data["senderId"] as? String ?: "",
+                        senderUsername = data["senderUsername"] as? String ?: "",
+                        content = data["content"] as? String ?: "",
+                        messageType = data["messageType"] as? String ?: "text",
+                        timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
+                        isRead = data["isRead"] as? Boolean ?: false,
+                        isDelivered = data["isDelivered"] as? Boolean ?: false
+                    )
+                } else null
             }.reversed()
             
             Result.success(messages)
@@ -458,7 +472,7 @@ class FirebaseService {
 
     // ===== REAL-TIME DİNLEME =====
     
-    fun listenToMessages(chatId: String, onMessage: (Map<String, Any>) -> Unit) {
+    fun listenToMessages(chatId: String, onMessage: (ChatMessage) -> Unit) {
         firestore.collection(MESSAGES_COLLECTION)
             .whereEqualTo("chatId", chatId)
             .orderBy("timestamp", Query.Direction.ASCENDING)
@@ -471,9 +485,21 @@ class FirebaseService {
                 snapshot?.documentChanges?.forEach { change ->
                     when (change.type) {
                         com.google.firebase.firestore.DocumentChange.Type.ADDED -> {
-                            val messageData = change.document.data?.toMutableMap()
-                            messageData?.put("id", change.document.id)
-                            messageData?.let { onMessage(it) }
+                            val data = change.document.data
+                            if (data != null) {
+                                val chatMessage = ChatMessage(
+                                    id = change.document.id,
+                                    chatId = data["chatId"] as? String ?: "",
+                                    senderId = data["senderId"] as? String ?: "",
+                                    senderUsername = data["senderUsername"] as? String ?: "",
+                                    content = data["content"] as? String ?: "",
+                                    messageType = data["messageType"] as? String ?: "text",
+                                    timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
+                                    isRead = data["isRead"] as? Boolean ?: false,
+                                    isDelivered = data["isDelivered"] as? Boolean ?: false
+                                )
+                                onMessage(chatMessage)
+                            }
                         }
                         else -> {}
                     }
