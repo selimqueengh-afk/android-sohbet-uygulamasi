@@ -132,9 +132,11 @@ class ChatActivity : AppCompatActivity() {
         if (chatId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
+                    Log.d("ChatActivity", "Loading messages for chatId: $chatId")
                     val result = firebaseService.getMessages(chatId)
                     if (result.isSuccess) {
                         val messages = result.getOrNull() ?: emptyList()
+                        Log.d("ChatActivity", "Loaded ${messages.size} messages")
                         messageList.clear()
                         
                         // Convert ChatMessage to Message for adapter
@@ -156,10 +158,16 @@ class ChatActivity : AppCompatActivity() {
                             recyclerView.scrollToPosition(messageList.size - 1)
                         }
                     } else {
-                        Toast.makeText(this@ChatActivity, "Mesajlar yüklenemedi", Toast.LENGTH_SHORT).show()
+                        Log.e("ChatActivity", "Failed to load messages: ${result.exceptionOrNull()}")
+                        Toast.makeText(this@ChatActivity, "Mesajlar yüklenemedi: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                        // Fallback to sample messages
+                        addSampleMessages()
                     }
                 } catch (e: Exception) {
+                    Log.e("ChatActivity", "Exception loading messages", e)
                     Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                    // Fallback to sample messages
+                    addSampleMessages()
                 }
             }
         } else {

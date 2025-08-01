@@ -534,6 +534,14 @@ class FirebaseService {
             val messages = snapshot.documents.mapNotNull { doc ->
                 val data = doc.data
                 if (data != null) {
+                    // Timestamp'i farklı formatlardan oku
+                    val timestamp = when (val ts = data["timestamp"]) {
+                        is Date -> ts.time
+                        is com.google.firebase.Timestamp -> ts.toDate().time
+                        is Long -> ts
+                        else -> System.currentTimeMillis()
+                    }
+                    
                     ChatMessage(
                         id = doc.id,
                         chatId = data["chatId"] as? String ?: "",
@@ -543,7 +551,7 @@ class FirebaseService {
                         messageType = data["messageType"] as? String ?: "text",
                         mediaUrl = data["mediaUrl"] as? String ?: "",
                         mediaType = data["mediaType"] as? String ?: "",
-                        timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
+                        timestamp = timestamp,
                         isRead = data["isRead"] as? Boolean ?: false,
                         isDelivered = data["isDelivered"] as? Boolean ?: false
                     )
@@ -592,6 +600,14 @@ class FirebaseService {
                         com.google.firebase.firestore.DocumentChange.Type.ADDED -> {
                             val data = change.document.data
                             if (data != null) {
+                                // Timestamp'i farklı formatlardan oku
+                                val timestamp = when (val ts = data["timestamp"]) {
+                                    is Date -> ts.time
+                                    is com.google.firebase.Timestamp -> ts.toDate().time
+                                    is Long -> ts
+                                    else -> System.currentTimeMillis()
+                                }
+                                
                                 val chatMessage = ChatMessage(
                                     id = change.document.id,
                                     chatId = data["chatId"] as? String ?: "",
@@ -601,7 +617,7 @@ class FirebaseService {
                                     messageType = data["messageType"] as? String ?: "text",
                                     mediaUrl = data["mediaUrl"] as? String ?: "",
                                     mediaType = data["mediaType"] as? String ?: "",
-                                    timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
+                                    timestamp = timestamp,
                                     isRead = data["isRead"] as? Boolean ?: false,
                                     isDelivered = data["isDelivered"] as? Boolean ?: false
                                 )
