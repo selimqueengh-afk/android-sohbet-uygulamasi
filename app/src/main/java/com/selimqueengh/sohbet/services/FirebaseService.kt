@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.Timestamp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.selimqueengh.sohbet.models.ChatMessage
 import com.selimqueengh.sohbet.models.User
@@ -64,10 +65,10 @@ class FirebaseService {
                 "displayName" to displayName,
                 "avatarUrl" to "",
                 "status" to "ONLINE",
-                "lastSeen" to Date(),
+                "lastSeen" to Timestamp.now(),
                 "isOnline" to true,
                 "friends" to listOf<String>(),
-                "createdAt" to Date()
+                "createdAt" to Timestamp.now()
             )
             
             firestore.collection(USERS_COLLECTION)
@@ -87,7 +88,7 @@ class FirebaseService {
             val updates = hashMapOf<String, Any>(
                 "isOnline" to isOnline,
                 "status" to status,
-                "lastSeen" to Date()
+                "lastSeen" to Timestamp.now()
             )
             firestore.collection(USERS_COLLECTION)
                 .document(userId)

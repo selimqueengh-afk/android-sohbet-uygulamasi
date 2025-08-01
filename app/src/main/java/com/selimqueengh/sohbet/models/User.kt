@@ -2,6 +2,7 @@ package com.selimqueengh.sohbet.models
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import com.google.firebase.Timestamp
 
 @Parcelize
 data class User(
@@ -10,7 +11,7 @@ data class User(
     val displayName: String = "",
     val avatarUrl: String? = null,
     val status: UserStatus = UserStatus.OFFLINE,
-    val lastSeen: Long = 0L,
+    val lastSeen: Timestamp? = null,
     val isOnline: Boolean = false,
     val isTyping: Boolean = false,
     val typingTo: String? = null
