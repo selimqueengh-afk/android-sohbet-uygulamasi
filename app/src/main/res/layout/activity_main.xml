@@ -65,6 +65,15 @@
 
     </LinearLayout>
 
-    <!-- Floating Action Button removed - moved to friends page -->
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/white"
+        app:menu="@menu/bottom_navigation_menu"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

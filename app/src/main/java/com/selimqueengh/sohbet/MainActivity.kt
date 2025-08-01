@@ -70,7 +70,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // FAB removed - moved to friends page
+        val bottomNavigation = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottomNavigation)
+        
+        bottomNavigation.setOnItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_chats -> {
+                    // Already on chats page
+                    true
+                }
+                R.id.nav_friends -> {
+                    val intent = Intent(this, FriendsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                R.id.nav_profile -> {
+                    // TODO: Add profile activity
+                    Toast.makeText(this, "Profil yakında gelecek", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                else -> false
+            }
+        }
     }
     
     private fun loadChatsFromFirebase() {
