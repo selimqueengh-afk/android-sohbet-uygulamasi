@@ -148,7 +148,10 @@ class ChatActivity : AppCompatActivity() {
                                 text = chatMessage.content,
                                 sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
                                 isSentByUser = chatMessage.senderId == currentUserId,
-                                timestamp = chatMessage.timestamp
+                                timestamp = chatMessage.timestamp,
+                                messageType = chatMessage.messageType,
+                                mediaUrl = chatMessage.mediaUrl,
+                                mediaType = chatMessage.mediaType
                             )
                             messageList.add(message)
                         }
@@ -177,7 +180,10 @@ class ChatActivity : AppCompatActivity() {
                 text = chatMessage.content,
                 sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
                 isSentByUser = chatMessage.senderId == currentUserId,
-                timestamp = chatMessage.timestamp
+                timestamp = chatMessage.timestamp,
+                messageType = chatMessage.messageType,
+                mediaUrl = chatMessage.mediaUrl,
+                mediaType = chatMessage.mediaType
             )
             
             // Add message to list and update UI
@@ -208,6 +214,25 @@ class ChatActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun sendMediaMessage(mediaUrl: String, mediaType: String, caption: String = "") {
+        if (chatId.isNotEmpty()) {
+            lifecycleScope.launch {
+                try {
+                    val result = firebaseService.sendMediaMessage(chatId, currentUserId, currentUsername, caption, mediaUrl, mediaType)
+                    if (result.isSuccess) {
+                        // Media message sent successfully
+                    } else {
+                        Toast.makeText(this@ChatActivity, "Medya gönderilemedi", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -269,27 +294,6 @@ class ChatActivity : AppCompatActivity() {
         // In a real app, you would use Intent to pick from gallery
         val videoUrl = "https://example.com/sample-video.mp4"
         sendMediaMessage(videoUrl, "video/mp4", "Video")
-    }
-
-    private fun sendMediaMessage(mediaUrl: String, mimeType: String, fileName: String) {
-        if (chatId.isNotEmpty()) {
-            val messageContent = "[$fileName]"
-            
-            lifecycleScope.launch {
-                try {
-                    val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageContent)
-                    if (result.isSuccess) {
-                        Toast.makeText(this@ChatActivity, "$fileName gönderildi", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@ChatActivity, "$fileName gönderilemedi", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            Toast.makeText(this, "Sohbet bulunamadı", Toast.LENGTH_SHORT).show()
-        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

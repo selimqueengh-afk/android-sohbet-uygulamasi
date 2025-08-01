@@ -25,7 +25,7 @@
 - **RecyclerView** - Performanslı liste görüntüleme
 - **Fragment Navigation** - Modüler yapı
 - **SharedPreferences** - Veri saklama
-- **WebSocket** - Gerçek zamanlı iletişim
+- **Firebase Firestore** - Gerçek zamanlı veritabanı
 
 ## 📋 Gereksinimler
 
@@ -78,7 +78,7 @@ app/
 │   │   └── User            # Kullanıcı modeli
 │   ├── adapters/           # RecyclerView adapter'ları
 │   ├── activities/         # Ana activity'ler
-│   └── websocket/         # WebSocket bağlantısı
+│   └── services/         # Firebase servisleri
 └── res/
     ├── layout/           # XML layout dosyaları
     ├── drawable/         # Icon ve drawable'lar
@@ -107,7 +107,7 @@ app/
 - Profil bilgileri
 
 ### 🔧 Teknik Özellikler
-- WebSocket ile gerçek zamanlı iletişim
+- Firebase Firestore ile gerçek zamanlı iletişim
 - SharedPreferences ile veri kalıcılığı
 - Efficient memory management
 - Error handling ve crash prevention

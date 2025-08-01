@@ -68,8 +68,7 @@ dependencies {
     // Animations
     implementation 'com.airbnb.android:lottie:6.2.0'
     
-    // WebSocket for real-time chat
-    implementation 'org.java-websocket:Java-WebSocket:1.5.4'
+    // WebSocket removed - using Firebase Firestore for real-time chat
     
     // JSON
     implementation 'com.google.code.gson:gson:2.10.1'

@@ -383,6 +383,8 @@ class FirebaseService {
                 "senderUsername" to senderUsername,
                 "content" to content,
                 "messageType" to "text",
+                "mediaUrl" to "",
+                "mediaType" to "",
                 "timestamp" to Date(),
                 "isRead" to false,
                 "isDelivered" to false
@@ -398,6 +400,40 @@ class FirebaseService {
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error sending message", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun sendMediaMessage(chatId: String, senderId: String, senderUsername: String, content: String, mediaUrl: String, mediaType: String): Result<Unit> {
+        return try {
+            val messageData = hashMapOf(
+                "chatId" to chatId,
+                "senderId" to senderId,
+                "senderUsername" to senderUsername,
+                "content" to content,
+                "messageType" to when {
+                    mediaType.startsWith("image/") -> "image"
+                    mediaType.startsWith("video/") -> "video"
+                    mediaType.startsWith("audio/") -> "audio"
+                    else -> "file"
+                },
+                "mediaUrl" to mediaUrl,
+                "mediaType" to mediaType,
+                "timestamp" to Date(),
+                "isRead" to false,
+                "isDelivered" to false
+            )
+            
+            firestore.collection(MESSAGES_COLLECTION)
+                .add(messageData)
+                .await()
+            
+            // Chat'in son mesajını güncelle
+            updateChatLastMessage(chatId, content)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending media message", e)
             Result.failure(e)
         }
     }
@@ -438,6 +474,8 @@ class FirebaseService {
                         senderUsername = data["senderUsername"] as? String ?: "",
                         content = data["content"] as? String ?: "",
                         messageType = data["messageType"] as? String ?: "text",
+                        mediaUrl = data["mediaUrl"] as? String ?: "",
+                        mediaType = data["mediaType"] as? String ?: "",
                         timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
                         isRead = data["isRead"] as? Boolean ?: false,
                         isDelivered = data["isDelivered"] as? Boolean ?: false
@@ -494,6 +532,8 @@ class FirebaseService {
                                     senderUsername = data["senderUsername"] as? String ?: "",
                                     content = data["content"] as? String ?: "",
                                     messageType = data["messageType"] as? String ?: "text",
+                                    mediaUrl = data["mediaUrl"] as? String ?: "",
+                                    mediaType = data["mediaType"] as? String ?: "",
                                     timestamp = (data["timestamp"] as? Date)?.time ?: 0L,
                                     isRead = data["isRead"] as? Boolean ?: false,
                                     isDelivered = data["isDelivered"] as? Boolean ?: false
