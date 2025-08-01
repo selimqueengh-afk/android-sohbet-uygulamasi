@@ -11,7 +11,7 @@ data class User(
     val displayName: String = "",
     val avatarUrl: String? = null,
     val status: UserStatus = UserStatus.OFFLINE,
-    val lastSeen: Timestamp? = null,
+    val lastSeen: Any? = null,
     val isOnline: Boolean = false,
     val isTyping: Boolean = false,
     val typingTo: String? = null

@@ -106,7 +106,26 @@ class FirebaseService {
                 .await()
             
             val users = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(User::class.java)?.copy(id = doc.id)
+                try {
+                    doc.toObject(User::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deserializing user: ${doc.id}", e)
+                    // Fallback: create user manually from document data
+                    val data = doc.data
+                    if (data != null) {
+                        User(
+                            id = doc.id,
+                            username = data["username"] as? String ?: "",
+                            displayName = data["displayName"] as? String ?: "",
+                            avatarUrl = data["avatarUrl"] as? String,
+                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                            lastSeen = data["lastSeen"],
+                            isOnline = data["isOnline"] as? Boolean ?: false,
+                            isTyping = data["isTyping"] as? Boolean ?: false,
+                            typingTo = data["typingTo"] as? String
+                        )
+                    } else null
+                }
             }
             Result.success(users)
         } catch (e: Exception) {
@@ -123,7 +142,26 @@ class FirebaseService {
                 .await()
             
             val user = snapshot.documents.firstOrNull()?.let { doc ->
-                doc.toObject(User::class.java)?.copy(id = doc.id)
+                try {
+                    doc.toObject(User::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deserializing user: ${doc.id}", e)
+                    // Fallback: create user manually from document data
+                    val data = doc.data
+                    if (data != null) {
+                        User(
+                            id = doc.id,
+                            username = data["username"] as? String ?: "",
+                            displayName = data["displayName"] as? String ?: "",
+                            avatarUrl = data["avatarUrl"] as? String,
+                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                            lastSeen = data["lastSeen"],
+                            isOnline = data["isOnline"] as? Boolean ?: false,
+                            isTyping = data["isTyping"] as? Boolean ?: false,
+                            typingTo = data["typingTo"] as? String
+                        )
+                    } else null
+                }
             }
             Result.success(user)
         } catch (e: Exception) {
