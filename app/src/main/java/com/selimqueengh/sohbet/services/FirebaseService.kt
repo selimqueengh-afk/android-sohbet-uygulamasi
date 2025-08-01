@@ -131,6 +131,24 @@ class FirebaseService {
         }
     }
 
+    suspend fun getUserById(userId: String): Result<User?> {
+        return try {
+            val doc = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            val user = if (doc.exists()) {
+                doc.toObject(User::class.java)?.copy(id = doc.id)
+            } else null
+            
+            Result.success(user)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user by ID", e)
+            Result.failure(e)
+        }
+    }
+
     // ===== ARKADAŞ SİSTEMİ =====
     
     suspend fun sendFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {

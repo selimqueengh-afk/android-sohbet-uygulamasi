@@ -76,53 +76,45 @@ class MainActivity : AppCompatActivity() {
         if (currentUserId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
-                    // First get friends
-                    val friendsResult = firebaseService.getFriends(currentUserId)
-                    if (friendsResult.isSuccess) {
-                        val friends = friendsResult.getOrNull() ?: emptyList()
-                        
-                        // Then get chats for each friend
+                    // Get all chats for current user
+                    val chatResult = firebaseService.getChats(currentUserId)
+                    if (chatResult.isSuccess) {
+                        val userChats = chatResult.getOrNull() ?: emptyList()
                         val chats = mutableListOf<ChatItem>()
-                        for (friendUser in friends) {
-                            val chatResult = firebaseService.getChats(currentUserId)
-                            if (chatResult.isSuccess) {
-                                val userChats = chatResult.getOrNull() ?: emptyList()
-                                val friendChat = userChats.find { chatData ->
-                                    val otherUserId = if (chatData["user1Id"] == currentUserId) {
-                                        chatData["user2Id"] as? String ?: ""
-                                    } else {
-                                        chatData["user1Id"] as? String ?: ""
-                                    }
-                                    otherUserId == friendUser.id
-                                }
-                                
-                                if (friendChat != null) {
-                                    val otherUserId = if (friendChat["user1Id"] == currentUserId) {
-                                        friendChat["user2Id"] as? String ?: ""
-                                    } else {
-                                        friendChat["user1Id"] as? String ?: ""
-                                    }
-                                    
-                                    val otherUser = friends.find { it.id == otherUserId }
-                                    
-                                    val chatItem = ChatItem(
-                                        chatId = friendChat["chatId"] as? String ?: "",
-                                        username = otherUser?.username ?: friendUser.username,
-                                        lastMessage = friendChat["lastMessageContent"] as? String ?: "Henüz mesaj yok",
-                                        timestamp = (friendChat["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
-                                        unreadCount = 0,
-                                        isOnline = otherUser?.isOnline ?: false
-                                    )
-                                    chats.add(chatItem)
-                                }
-                            }
+                        
+                        for (chatData in userChats) {
+                            val participants = chatData["participants"] as? List<String> ?: emptyList()
+                            val otherUserId = participants.find { it != currentUserId } ?: continue
+                            
+                            // Get other user info
+                            val otherUserResult = firebaseService.getUserById(otherUserId)
+                            val otherUser = otherUserResult.getOrNull()
+                            
+                            val chatItem = ChatItem(
+                                chatId = chatData["chatId"] as? String ?: "",
+                                username = otherUser?.username ?: "Bilinmeyen Kullanıcı",
+                                lastMessage = chatData["lastMessage"] as? String ?: "Henüz mesaj yok",
+                                timestamp = (chatData["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
+                                unreadCount = 0,
+                                isOnline = otherUser?.isOnline ?: false
+                            )
+                            chats.add(chatItem)
                         }
                         
                         chatList.clear()
                         chatList.addAll(chats)
                         chatAdapter.notifyDataSetChanged()
+                        
+                        // Show empty state if no chats
+                        val emptyStateLayout = findViewById<android.view.View>(R.id.emptyStateLayout)
+                        if (chats.isEmpty()) {
+                            emptyStateLayout?.visibility = android.view.View.VISIBLE
+                        } else {
+                            emptyStateLayout?.visibility = android.view.View.GONE
+                        }
+                        
                     } else {
-                        Toast.makeText(this@MainActivity, "Arkadaşlar yüklenemedi", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Sohbetler yüklenemedi", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
                     Toast.makeText(this@MainActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
