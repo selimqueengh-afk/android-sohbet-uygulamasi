@@ -53,12 +53,46 @@ class ChatActivity : AppCompatActivity() {
         setupClickListeners()
         setupToolbar()
         
-        // Load messages from Firebase
-        loadMessages()
-        
-        // Listen for real-time messages
-        if (chatId.isNotEmpty()) {
+        // Create or get chat
+        if (chatId.isEmpty()) {
+            createChatWithPartner()
+        } else {
+            // Load messages from Firebase
+            loadMessages()
+            
+            // Listen for real-time messages
             setupMessageListener()
+        }
+    }
+
+    private fun createChatWithPartner() {
+        lifecycleScope.launch {
+            try {
+                // Get partner user ID
+                val partnerResult = firebaseService.searchUserByUsername(chatPartnerName)
+                if (partnerResult.isSuccess) {
+                    val partnerUser = partnerResult.getOrNull()
+                    if (partnerUser != null) {
+                        val chatResult = firebaseService.createChat(currentUserId, partnerUser.id)
+                        if (chatResult.isSuccess) {
+                            chatId = chatResult.getOrNull() ?: ""
+                            Log.d("ChatActivity", "Chat created with ID: $chatId")
+                            
+                            // Now load messages and setup listener
+                            loadMessages()
+                            setupMessageListener()
+                        } else {
+                            Toast.makeText(this@ChatActivity, "Sohbet oluşturulamadı", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(this@ChatActivity, "Kullanıcı bulunamadı", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(this@ChatActivity, "Kullanıcı arama hatası", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -156,40 +190,32 @@ class ChatActivity : AppCompatActivity() {
 
     private fun sendMessage() {
         val messageText = messageEditText.text.toString().trim()
-        if (messageText.isNotEmpty() && chatId.isNotEmpty()) {
-            val chatMessage = ChatMessage(
-                chatId = chatId,
-                senderId = currentUserId,
-                senderUsername = currentUsername,
-                content = messageText,
-                messageType = MessageType.TEXT,
-                timestamp = System.currentTimeMillis()
-            )
-            
-            lifecycleScope.launch {
-                try {
-                    val result = firebaseService.sendMessage(chatMessage)
-                    if (result.isSuccess) {
-                        messageEditText.text.clear()
-                    } else {
-                        Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
+        if (messageText.isNotEmpty()) {
+            if (chatId.isNotEmpty()) {
+                val chatMessage = ChatMessage(
+                    chatId = chatId,
+                    senderId = currentUserId,
+                    senderUsername = currentUsername,
+                    content = messageText,
+                    messageType = MessageType.TEXT,
+                    timestamp = System.currentTimeMillis()
+                )
+                
+                lifecycleScope.launch {
+                    try {
+                        val result = firebaseService.sendMessage(chatMessage)
+                        if (result.isSuccess) {
+                            messageEditText.text.clear()
+                        } else {
+                            Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
+            } else {
+                Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
             }
-        } else if (messageText.isNotEmpty()) {
-            // Fallback for demo purposes
-            val message = Message(
-                text = messageText,
-                sender = "Ben",
-                isSentByUser = true,
-                timestamp = System.currentTimeMillis()
-            )
-            messageList.add(message)
-            messageAdapter.notifyItemInserted(messageList.size - 1)
-            recyclerView.scrollToPosition(messageList.size - 1)
-            messageEditText.text.clear()
         }
     }
 

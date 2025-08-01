@@ -111,6 +111,10 @@ class FriendRequestsActivity : AppCompatActivity() {
                 if (result.isSuccess) {
                     Toast.makeText(this@FriendRequestsActivity, "İstek kabul edildi", Toast.LENGTH_SHORT).show()
                     loadFriendRequests() // Refresh list
+                    
+                    // Ana sayfaya dön ve sohbet listesini yenile
+                    setResult(RESULT_OK)
+                    finish()
                 } else {
                     Toast.makeText(this@FriendRequestsActivity, "İstek kabul edilemedi", Toast.LENGTH_SHORT).show()
                 }
