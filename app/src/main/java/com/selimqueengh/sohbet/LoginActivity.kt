@@ -74,7 +74,7 @@ class LoginActivity : AppCompatActivity() {
         loginButton.startAnimation(slideUp)
         
         // Logo animasyonu
-        val logo = findViewById<android.widget.ImageView>(R.id.logoImage)
+        val logo = findViewById<android.widget.ImageView>(R.id.logoImageView)
         logo?.let {
             val scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.scale_in)
             scaleAnimation.duration = 1200
