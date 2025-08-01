@@ -16,6 +16,9 @@ import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.UserStatus
 import com.selimqueengh.sohbet.models.ChatMessage
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 class FirebaseService {
@@ -73,7 +76,7 @@ class FirebaseService {
         val currentUser = auth.currentUser
         if (currentUser != null) {
             // Suspend function'ı coroutine scope'da çağır
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            CoroutineScope(Dispatchers.IO).launch {
                 setUserOffline(currentUser.uid)
             }
         }
