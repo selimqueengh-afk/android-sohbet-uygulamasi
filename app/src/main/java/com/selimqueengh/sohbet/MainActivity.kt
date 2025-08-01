@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.ChatItem
+import com.selimqueengh.sohbet.fragments.ChatsFragment
 import com.selimqueengh.sohbet.services.FirebaseService
 import kotlinx.coroutines.launch
 
@@ -75,12 +76,12 @@ class MainActivity : AppCompatActivity() {
         bottomNavigation.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_chats -> {
-                    // Already on chats page
+                    showChatsFragment()
                     true
                 }
                 R.id.nav_friends -> {
                     val intent = Intent(this, FriendsActivity::class.java)
-                    startActivity(intent)
+                    startActivityForResult(intent, 1001)
                     true
                 }
                 R.id.nav_profile -> {
@@ -91,6 +92,16 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+        
+        // Default to chats fragment
+        showChatsFragment()
+    }
+
+    private fun showChatsFragment() {
+        val fragment = ChatsFragment()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.contentFrame, fragment)
+            .commit()
     }
     
     private fun loadChatsFromFirebase() {

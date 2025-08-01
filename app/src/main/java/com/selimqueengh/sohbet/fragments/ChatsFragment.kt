@@ -51,13 +51,60 @@ class ChatsFragment : Fragment() {
     }
 
     private fun loadChats() {
-        // TODO: Load chats from Firebase
-        if (chatList.isEmpty()) {
+        // Load chats from Firebase
+        val sharedPreferences = requireActivity().getSharedPreferences("SnickersChatv4", android.content.Context.MODE_PRIVATE)
+        val currentUserId = sharedPreferences.getString("user_id", "") ?: ""
+        
+        if (currentUserId.isNotEmpty()) {
+            val firebaseService = com.selimqueengh.sohbet.services.FirebaseService()
+            
+            androidx.lifecycle.lifecycleScope.launch {
+                try {
+                    val result = firebaseService.getChats(currentUserId)
+                    if (result.isSuccess) {
+                        val userChats = result.getOrNull() ?: emptyList()
+                        chatList.clear()
+                        
+                        for (chatData in userChats) {
+                            val participants = chatData["participants"] as? List<String> ?: emptyList()
+                            val otherUserId = participants.find { it != currentUserId } ?: continue
+                            
+                            // Get other user info
+                            val otherUserResult = firebaseService.getUserById(otherUserId)
+                            val otherUser = otherUserResult.getOrNull()
+                            
+                            val chatItem = com.selimqueengh.sohbet.models.ChatItem(
+                                chatId = chatData["chatId"] as? String ?: "",
+                                username = otherUser?.username ?: "Bilinmeyen Kullanıcı",
+                                lastMessage = chatData["lastMessage"] as? String ?: "Henüz mesaj yok",
+                                timestamp = (chatData["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
+                                unreadCount = 0,
+                                isOnline = otherUser?.isOnline ?: false
+                            )
+                            chatList.add(chatItem)
+                        }
+                        
+                        requireActivity().runOnUiThread {
+                            if (chatList.isEmpty()) {
+                                emptyStateText.visibility = View.VISIBLE
+                                recyclerView.visibility = View.GONE
+                            } else {
+                                emptyStateText.visibility = View.GONE
+                                recyclerView.visibility = View.VISIBLE
+                            }
+                            chatAdapter.notifyDataSetChanged()
+                        }
+                    }
+                } catch (e: Exception) {
+                    requireActivity().runOnUiThread {
+                        emptyStateText.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                    }
+                }
+            }
+        } else {
             emptyStateText.visibility = View.VISIBLE
             recyclerView.visibility = View.GONE
-        } else {
-            emptyStateText.visibility = View.GONE
-            recyclerView.visibility = View.VISIBLE
         }
     }
 
