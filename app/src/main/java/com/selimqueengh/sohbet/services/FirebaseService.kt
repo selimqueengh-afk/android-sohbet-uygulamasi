@@ -17,14 +17,15 @@ class FirebaseService {
         private const val USERS_COLLECTION = "users"
         private const val MESSAGES_COLLECTION = "messages"
         private const val CHATS_COLLECTION = "chats"
-        private const val FRIENDS_COLLECTION = "friends"
+        private const val FRIEND_REQUESTS_COLLECTION = "friend_requests"
     }
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
     private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance()
 
-    // Authentication methods
+    // ===== AUTHENTICATION =====
+    
     suspend fun signInAnonymously(): Result<FirebaseUser> {
         return try {
             val result = auth.signInAnonymously().await()
@@ -43,29 +44,38 @@ class FirebaseService {
         auth.signOut()
     }
 
-    // User management
-    suspend fun createUser(user: User): Result<Unit> {
+    // ===== KULLANICI YÖNETİMİ =====
+    
+    suspend fun createUser(userId: String, username: String, displayName: String): Result<Unit> {
         return try {
-            val currentUser = auth.currentUser
-            if (currentUser != null) {
-                val userData = hashMapOf(
-                    "id" to currentUser.uid,
-                    "username" to user.username,
-                    "displayName" to user.displayName,
-                    "avatarUrl" to user.avatarUrl,
-                    "status" to user.status.name,
-                    "lastSeen" to user.lastSeen,
-                    "isOnline" to user.isOnline,
-                    "createdAt" to Date()
-                )
-                firestore.collection(USERS_COLLECTION)
-                    .document(currentUser.uid)
-                    .set(userData)
-                    .await()
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("No authenticated user"))
+            // Kullanıcı adının benzersiz olup olmadığını kontrol et
+            val existingUser = firestore.collection(USERS_COLLECTION)
+                .whereEqualTo("username", username)
+                .get()
+                .await()
+            
+            if (!existingUser.isEmpty) {
+                return Result.failure(Exception("Bu kullanıcı adı zaten kullanılıyor"))
             }
+            
+            val userData = hashMapOf(
+                "id" to userId,
+                "username" to username,
+                "displayName" to displayName,
+                "avatarUrl" to "",
+                "status" to "ONLINE",
+                "lastSeen" to Date(),
+                "isOnline" to true,
+                "friends" to listOf<String>(),
+                "createdAt" to Date()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .set(userData)
+                .await()
+            
+            Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error creating user", e)
             Result.failure(e)
@@ -121,7 +131,183 @@ class FirebaseService {
         }
     }
 
-    // Chat and messaging
+    // ===== ARKADAŞ SİSTEMİ =====
+    
+    suspend fun sendFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {
+        return try {
+            // Daha önce istek gönderilip gönderilmediğini kontrol et
+            val existingRequest = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("fromUserId", fromUserId)
+                .whereEqualTo("toUserId", toUserId)
+                .whereEqualTo("status", "pending")
+                .get()
+                .await()
+            
+            if (!existingRequest.isEmpty) {
+                return Result.failure(Exception("Bu kullanıcıya zaten istek gönderilmiş"))
+            }
+            
+            val requestData = hashMapOf(
+                "fromUserId" to fromUserId,
+                "toUserId" to toUserId,
+                "status" to "pending",
+                "timestamp" to Date()
+            )
+            
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .add(requestData)
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending friend request", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getIncomingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
+        return try {
+            val snapshot = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("toUserId", userId)
+                .whereEqualTo("status", "pending")
+                .get()
+                .await()
+            
+            val requests = snapshot.documents.map { doc ->
+                doc.data?.toMutableMap()?.apply {
+                    put("requestId", doc.id)
+                } ?: mutableMapOf()
+            }
+            
+            Result.success(requests)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting incoming friend requests", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun acceptFriendRequest(requestId: String): Result<Unit> {
+        return try {
+            // İsteği kabul et
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .document(requestId)
+                .update("status", "accepted")
+                .await()
+            
+            // İsteğin detaylarını al
+            val requestDoc = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .document(requestId)
+                .get()
+                .await()
+            
+            val fromUserId = requestDoc.getString("fromUserId") ?: ""
+            val toUserId = requestDoc.getString("toUserId") ?: ""
+            
+            // Her iki kullanıcının friends listesine ekle
+            firestore.collection(USERS_COLLECTION)
+                .document(toUserId)
+                .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(fromUserId))
+                .await()
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(fromUserId)
+                .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(toUserId))
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error accepting friend request", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rejectFriendRequest(requestId: String): Result<Unit> {
+        return try {
+            firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .document(requestId)
+                .delete()
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error rejecting friend request", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFriends(userId: String): Result<List<User>> {
+        return try {
+            val userDoc = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            val friendsList = userDoc.get("friends") as? List<String> ?: emptyList()
+            val friends = mutableListOf<User>()
+            
+            for (friendId in friendsList) {
+                val friendDoc = firestore.collection(USERS_COLLECTION)
+                    .document(friendId)
+                    .get()
+                    .await()
+                
+                if (friendDoc.exists()) {
+                    val friendUser = friendDoc.toObject(User::class.java)?.copy(id = friendDoc.id)
+                    if (friendUser != null) {
+                        friends.add(friendUser)
+                    }
+                }
+            }
+            
+            Result.success(friends)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting friends", e)
+            Result.failure(e)
+        }
+    }
+
+    // ===== SOHBET SİSTEMİ =====
+    
+    suspend fun createChat(user1Id: String, user2Id: String): Result<String> {
+        return try {
+            val chatData = hashMapOf(
+                "participants" to listOf(user1Id, user2Id),
+                "lastMessage" to "",
+                "lastMessageTimestamp" to Date(),
+                "createdAt" to Date()
+            )
+            
+            val docRef = firestore.collection(CHATS_COLLECTION)
+                .add(chatData)
+                .await()
+            
+            Result.success(docRef.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating chat", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getChats(userId: String): Result<List<Map<String, Any>>> {
+        return try {
+            val snapshot = firestore.collection(CHATS_COLLECTION)
+                .whereArrayContains("participants", userId)
+                .get()
+                .await()
+            
+            val chats = snapshot.documents.map { doc ->
+                doc.data?.toMutableMap()?.apply {
+                    put("chatId", doc.id)
+                } ?: mutableMapOf()
+            }
+            
+            Result.success(chats)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting chats", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun sendMessage(message: ChatMessage): Result<Unit> {
         return try {
             val messageData = hashMapOf(
@@ -144,7 +330,7 @@ class FirebaseService {
                 .add(messageData)
                 .await()
             
-            // Update chat's last message
+            // Chat'in son mesajını güncelle
             updateChatLastMessage(message.chatId, message)
             
             Result.success(Unit)
@@ -157,8 +343,7 @@ class FirebaseService {
     private suspend fun updateChatLastMessage(chatId: String, message: ChatMessage) {
         try {
             val chatData = hashMapOf<String, Any>(
-                "lastMessageId" to message.id,
-                "lastMessageContent" to message.content,
+                "lastMessage" to message.content,
                 "lastMessageTimestamp" to Date(message.timestamp),
                 "updatedAt" to Date()
             )
@@ -192,141 +377,8 @@ class FirebaseService {
         }
     }
 
-    suspend fun createChat(user1Id: String, user2Id: String): Result<String> {
-        return try {
-            val chatData = hashMapOf(
-                "user1Id" to user1Id,
-                "user2Id" to user2Id,
-                "createdAt" to Date(),
-                "updatedAt" to Date()
-            )
-            
-            val docRef = firestore.collection(CHATS_COLLECTION)
-                .add(chatData)
-                .await()
-            
-            Result.success(docRef.id)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating chat", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getChats(userId: String): Result<List<Map<String, Any>>> {
-        return try {
-            val snapshot = firestore.collection(CHATS_COLLECTION)
-                .whereEqualTo("user1Id", userId)
-                .get()
-                .await()
-            
-            val snapshot2 = firestore.collection(CHATS_COLLECTION)
-                .whereEqualTo("user2Id", userId)
-                .get()
-                .await()
-            
-            val allChats = snapshot.documents + snapshot2.documents
-            val chats = allChats.map { doc ->
-                doc.data?.toMutableMap()?.apply {
-                    put("chatId", doc.id)
-                } ?: mutableMapOf()
-            }
-            
-            Result.success(chats)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting chats", e)
-            Result.failure(e)
-        }
-    }
-
-    // FRIEND REQUEST SYSTEM (friend_requests collection)
-    private val FRIEND_REQUESTS_COLLECTION = "friend_requests"
-
-    suspend fun addFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {
-        return try {
-            val requestData = hashMapOf(
-                "fromUserId" to fromUserId,
-                "toUserId" to toUserId,
-                "status" to "pending",
-                "timestamp" to Date()
-            )
-            firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .add(requestData)
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending friend request", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getIncomingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
-        return try {
-            val snapshot = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .whereEqualTo("toUserId", userId)
-                .whereEqualTo("status", "pending")
-                .get()
-                .await()
-            val requests = snapshot.documents.map { doc ->
-                doc.data?.toMutableMap()?.apply { put("requestId", doc.id) } ?: mutableMapOf()
-            }
-            Result.success(requests)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting incoming friend requests", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun acceptFriendRequest(requestId: String): Result<Unit> {
-        return try {
-            firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .document(requestId)
-                .update("status", "accepted")
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error accepting friend request", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun rejectFriendRequest(requestId: String): Result<Unit> {
-        return try {
-            firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .document(requestId)
-                .delete()
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error rejecting friend request", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun getFriends(userId: String): Result<List<User>> {
-        return try {
-            val accepted1 = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .whereEqualTo("fromUserId", userId)
-                .whereEqualTo("status", "accepted")
-                .get().await()
-            val accepted2 = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .whereEqualTo("toUserId", userId)
-                .whereEqualTo("status", "accepted")
-                .get().await()
-            val userIds = (accepted1.documents.mapNotNull { it.getString("toUserId") } +
-                           accepted2.documents.mapNotNull { it.getString("fromUserId") }).distinct()
-            val users = mutableListOf<User>()
-            for (id in userIds) {
-                val userDoc = firestore.collection(USERS_COLLECTION).document(id).get().await()
-                userDoc.toObject(User::class.java)?.copy(id = userDoc.id)?.let { users.add(it) }
-            }
-            Result.success(users)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting friends", e)
-            Result.failure(e)
-        }
-    }
-
-    // FCM Token management
+    // ===== FCM TOKEN YÖNETİMİ =====
+    
     suspend fun updateFCMToken(userId: String): Result<String> {
         return try {
             val token = messaging.token.await()
@@ -343,7 +395,8 @@ class FirebaseService {
         }
     }
 
-    // Real-time listeners
+    // ===== REAL-TIME DİNLEME =====
+    
     fun listenToMessages(chatId: String, onMessage: (ChatMessage) -> Unit) {
         firestore.collection(MESSAGES_COLLECTION)
             .whereEqualTo("chatId", chatId)
