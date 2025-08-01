@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        "friends": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "friend_requests": {
+      "$receiverUid": {
+        ".read": "auth != null && auth.uid == $receiverUid",
+        ".write": "auth != null",
+        "$senderUid": {
+          ".read": "auth != null && (auth.uid == $receiverUid || auth.uid == $senderUid)",
+          ".write": "auth != null && auth.uid == $senderUid"
+        }
+      }
+    }
+  }
+}
