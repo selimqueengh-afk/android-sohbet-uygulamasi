@@ -32,6 +32,8 @@
     <!-- Action Colors -->
     <color name="delete_color">#EF4444</color>
     <color name="copy_color">#3B82F6</color>
+    <color name="accept_color">#10B981</color>
+    <color name="reject_color">#EF4444</color>
     
     <!-- Gradient Colors -->
     <color name="gradient_start">#667eea</color>
