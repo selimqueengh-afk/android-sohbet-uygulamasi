@@ -193,6 +193,8 @@ class FirebaseService {
     
     suspend fun sendFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {
         return try {
+            Log.d(TAG, "Sending friend request from $fromUserId to $toUserId")
+            
             // Daha önce istek gönderilip gönderilmediğini kontrol et
             val existingRequest = firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .whereEqualTo("fromUserId", fromUserId)
@@ -201,7 +203,10 @@ class FirebaseService {
                 .get()
                 .await()
             
+            Log.d(TAG, "Existing requests found: ${existingRequest.size()}")
+            
             if (!existingRequest.isEmpty) {
+                Log.d(TAG, "Request already exists")
                 return Result.failure(Exception("Bu kullanıcıya zaten istek gönderilmiş"))
             }
             
@@ -209,13 +214,16 @@ class FirebaseService {
                 "fromUserId" to fromUserId,
                 "toUserId" to toUserId,
                 "status" to "pending",
-                "timestamp" to Date()
+                "timestamp" to Timestamp.now()
             )
             
-            firestore.collection(FRIEND_REQUESTS_COLLECTION)
+            Log.d(TAG, "Creating request with data: $requestData")
+            
+            val docRef = firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .add(requestData)
                 .await()
             
+            Log.d(TAG, "Request created successfully with ID: ${docRef.id}")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error sending friend request", e)

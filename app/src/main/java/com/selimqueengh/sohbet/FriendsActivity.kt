@@ -173,17 +173,23 @@ class FriendsActivity : AppCompatActivity() {
     private fun sendFriendRequest(friendId: String, callback: () -> Unit) {
         lifecycleScope.launch {
             try {
+                Log.d("FriendsActivity", "Sending friend request to: $friendId")
                 val result = firebaseService.sendFriendRequest(currentUserId, friendId)
+                Log.d("FriendsActivity", "Send friend request result: $result")
+                
                 if (result.isSuccess) {
                     runOnUiThread {
                         callback()
                     }
                 } else {
+                    val error = result.exceptionOrNull()?.message ?: "Bilinmeyen hata"
+                    Log.e("FriendsActivity", "Failed to send friend request: $error")
                     runOnUiThread {
-                        Toast.makeText(this@FriendsActivity, "İstek gönderilemedi", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@FriendsActivity, "İstek gönderilemedi: $error", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
+                Log.e("FriendsActivity", "Exception sending friend request", e)
                 runOnUiThread {
                     Toast.makeText(this@FriendsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
