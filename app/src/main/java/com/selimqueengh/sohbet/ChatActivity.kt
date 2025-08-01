@@ -192,18 +192,9 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
-                val chatMessage = ChatMessage(
-                    chatId = chatId,
-                    senderId = currentUserId,
-                    senderUsername = currentUsername,
-                    content = messageText,
-                    messageType = MessageType.TEXT,
-                    timestamp = System.currentTimeMillis()
-                )
-                
                 lifecycleScope.launch {
                     try {
-                        val result = firebaseService.sendMessage(chatMessage)
+                        val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageText)
                         if (result.isSuccess) {
                             messageEditText.text.clear()
                         } else {
@@ -281,20 +272,11 @@ class ChatActivity : AppCompatActivity() {
 
     private fun sendMediaMessage(mediaUrl: String, mimeType: String, fileName: String) {
         if (chatId.isNotEmpty()) {
-            val chatMessage = ChatMessage(
-                chatId = chatId,
-                senderId = currentUserId,
-                senderUsername = currentUsername,
-                content = "[$fileName]",
-                messageType = if (mimeType.startsWith("image/")) MessageType.IMAGE else MessageType.VIDEO,
-                timestamp = System.currentTimeMillis(),
-                mediaUrl = mediaUrl,
-                mediaFileName = fileName
-            )
+            val messageContent = "[$fileName]"
             
             lifecycleScope.launch {
                 try {
-                    val result = firebaseService.sendMessage(chatMessage)
+                    val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageContent)
                     if (result.isSuccess) {
                         Toast.makeText(this@ChatActivity, "$fileName gönderildi", Toast.LENGTH_SHORT).show()
                     } else {

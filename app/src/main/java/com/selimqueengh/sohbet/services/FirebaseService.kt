@@ -374,22 +374,17 @@ class FirebaseService {
         }
     }
 
-    suspend fun sendMessage(message: ChatMessage): Result<Unit> {
+    suspend fun sendMessage(chatId: String, senderId: String, senderUsername: String, content: String): Result<Unit> {
         return try {
             val messageData = hashMapOf(
-                "chatId" to message.chatId,
-                "senderId" to message.senderId,
-                "senderUsername" to message.senderUsername,
-                "content" to message.content,
-                "messageType" to message.messageType.name,
-                "timestamp" to Date(message.timestamp),
-                "isRead" to message.isRead,
-                "isDelivered" to message.isDelivered,
-                "replyToMessageId" to message.replyToMessageId,
-                "mediaUrl" to message.mediaUrl,
-                "mediaFileName" to message.mediaFileName,
-                "isEdited" to message.isEdited,
-                "editedAt" to message.editedAt?.let { Date(it) }
+                "chatId" to chatId,
+                "senderId" to senderId,
+                "senderUsername" to senderUsername,
+                "content" to content,
+                "messageType" to "text",
+                "timestamp" to Date(),
+                "isRead" to false,
+                "isDelivered" to false
             )
             
             firestore.collection(MESSAGES_COLLECTION)
@@ -397,7 +392,7 @@ class FirebaseService {
                 .await()
             
             // Chat'in son mesajını güncelle
-            updateChatLastMessage(message.chatId, message)
+            updateChatLastMessage(chatId, content)
             
             Result.success(Unit)
         } catch (e: Exception) {
@@ -406,11 +401,11 @@ class FirebaseService {
         }
     }
 
-    private suspend fun updateChatLastMessage(chatId: String, message: ChatMessage) {
+    private suspend fun updateChatLastMessage(chatId: String, content: String) {
         try {
             val chatData = hashMapOf<String, Any>(
-                "lastMessage" to message.content,
-                "lastMessageTimestamp" to Date(message.timestamp),
+                "lastMessage" to content,
+                "lastMessageTimestamp" to Date(),
                 "updatedAt" to Date()
             )
             
@@ -423,7 +418,7 @@ class FirebaseService {
         }
     }
 
-    suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<ChatMessage>> {
+    suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<Map<String, Any>>> {
         return try {
             val snapshot = firestore.collection(MESSAGES_COLLECTION)
                 .whereEqualTo("chatId", chatId)
@@ -433,7 +428,7 @@ class FirebaseService {
                 .await()
             
             val messages = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(ChatMessage::class.java)?.copy(id = doc.id)
+                doc.data?.toMutableMap()?.apply { put("id", doc.id) }
             }.reversed()
             
             Result.success(messages)
@@ -463,7 +458,7 @@ class FirebaseService {
 
     // ===== REAL-TIME DİNLEME =====
     
-    fun listenToMessages(chatId: String, onMessage: (ChatMessage) -> Unit) {
+    fun listenToMessages(chatId: String, onMessage: (Map<String, Any>) -> Unit) {
         firestore.collection(MESSAGES_COLLECTION)
             .whereEqualTo("chatId", chatId)
             .orderBy("timestamp", Query.Direction.ASCENDING)
@@ -476,8 +471,9 @@ class FirebaseService {
                 snapshot?.documentChanges?.forEach { change ->
                     when (change.type) {
                         com.google.firebase.firestore.DocumentChange.Type.ADDED -> {
-                            val message = change.document.toObject(ChatMessage::class.java)
-                            message?.let { onMessage(it.copy(id = change.document.id)) }
+                            val messageData = change.document.data?.toMutableMap()
+                            messageData?.put("id", change.document.id)
+                            messageData?.let { onMessage(it) }
                         }
                         else -> {}
                     }
