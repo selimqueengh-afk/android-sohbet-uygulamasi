@@ -127,7 +127,7 @@ class LoginActivity : AppCompatActivity() {
                     runOnUiThread {
                         Toast.makeText(this@LoginActivity, "Hoş geldin, $username!", Toast.LENGTH_SHORT).show()
                         
-                        val intent = Intent(this@LoginActivity, SetupFirestoreActivity::class.java)
+                        val intent = Intent(this@LoginActivity, MainActivity::class.java)
                         intent.putExtra("username", username)
                         startActivity(intent)
                         finish()
