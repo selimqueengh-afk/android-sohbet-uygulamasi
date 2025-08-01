@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.ChatActivity
 import com.selimqueengh.sohbet.ChatAdapter
-import com.selimqueengh.sohbet.ChatItem
+import com.selimqueengh.sohbet.models.ChatItem
 import com.selimqueengh.sohbet.FriendsActivity
 import com.selimqueengh.sohbet.R
 
@@ -20,7 +20,7 @@ class ChatsFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabNewChat: FloatingActionButton
     private lateinit var chatAdapter: ChatAdapter
-    private val chatList = mutableListOf<ChatItem>()
+    private val chatList = mutableListOf<com.selimqueengh.sohbet.models.ChatItem>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_chats, container, false)

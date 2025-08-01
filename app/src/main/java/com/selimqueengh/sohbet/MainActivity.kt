@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.models.User
+import com.selimqueengh.sohbet.models.ChatItem
 import com.selimqueengh.sohbet.services.FirebaseService
 import kotlinx.coroutines.launch
 
@@ -23,7 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var firebaseService: FirebaseService
     private lateinit var sharedPreferences: SharedPreferences
     
-    private val chatList = mutableListOf<ChatItem>()
+    private val chatList = mutableListOf<com.selimqueengh.sohbet.models.ChatItem>()
     private var currentUserId: String = ""
     private var currentUsername: String = ""
 
