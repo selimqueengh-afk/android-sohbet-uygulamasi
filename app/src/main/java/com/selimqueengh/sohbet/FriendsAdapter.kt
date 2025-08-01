@@ -9,12 +9,14 @@ import com.selimqueengh.sohbet.models.Friend
 
 class FriendsAdapter(
     private val friends: List<Friend>,
-    private val onFriendClick: (Friend) -> Unit
+    private val onFriendClick: (Friend) -> Unit,
+    private val onFriendDelete: (Friend) -> Unit
 ) : RecyclerView.Adapter<FriendsAdapter.FriendViewHolder>() {
 
     class FriendViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val nameText: TextView = itemView.findViewById(R.id.friendNameText)
         val statusText: TextView = itemView.findViewById(R.id.friendStatusText)
+        val deleteButton: android.widget.ImageButton = itemView.findViewById(R.id.deleteFriendButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FriendViewHolder {
@@ -31,6 +33,10 @@ class FriendsAdapter(
         
         holder.itemView.setOnClickListener {
             onFriendClick(friend)
+        }
+        
+        holder.deleteButton.setOnClickListener {
+            onFriendDelete(friend)
         }
     }
 

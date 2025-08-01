@@ -109,10 +109,7 @@ class FriendRequestsActivity : AppCompatActivity() {
             try {
                 val result = firebaseService.acceptFriendRequest(requestId)
                 if (result.isSuccess) {
-                    Toast.makeText(this@FriendRequestsActivity, "İstek kabul edildi", Toast.LENGTH_SHORT).show()
-                    
-                    // Sohbet oluştur
-                    createChatForAcceptedRequest(requestId)
+                    Toast.makeText(this@FriendRequestsActivity, "İstek kabul edildi ve sohbet oluşturuldu", Toast.LENGTH_SHORT).show()
                     
                     // Ana sayfaya dön ve sohbet listesini yenile
                     setResult(RESULT_OK)
@@ -122,34 +119,6 @@ class FriendRequestsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@FriendRequestsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun createChatForAcceptedRequest(requestId: String) {
-        lifecycleScope.launch {
-            try {
-                // İsteğin detaylarını al ve sohbet oluştur
-                val requestResult = firebaseService.getIncomingFriendRequests(currentUserId)
-                if (requestResult.isSuccess) {
-                    val requests = requestResult.getOrNull() ?: emptyList()
-                    val request = requests.find { it["requestId"] == requestId }
-                    
-                    if (request != null) {
-                        val fromUserId = request["fromUserId"] as? String ?: ""
-                        val toUserId = request["toUserId"] as? String ?: ""
-                        
-                        // Sohbet oluştur
-                        val chatResult = firebaseService.createChat(fromUserId, toUserId)
-                        if (chatResult.isSuccess) {
-                            Log.d("FriendRequestsActivity", "Chat created successfully")
-                        } else {
-                            Log.e("FriendRequestsActivity", "Failed to create chat")
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FriendRequestsActivity", "Error creating chat", e)
             }
         }
     }

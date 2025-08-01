@@ -306,6 +306,9 @@ class FirebaseService {
                 .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(toUserId))
                 .await()
             
+            // Otomatik sohbet oluştur (Realtime Database)
+            createRealtimeChat(fromUserId, toUserId)
+            
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error accepting friend request", e)
@@ -354,6 +357,31 @@ class FirebaseService {
             Result.success(friends)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting friends", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeFriend(userId: String, friendId: String): Result<Unit> {
+        return try {
+            // Her iki kullanıcının friends listesinden çıkar
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update("friends", com.google.firebase.firestore.FieldValue.arrayRemove(friendId))
+                .await()
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(friendId)
+                .update("friends", com.google.firebase.firestore.FieldValue.arrayRemove(userId))
+                .await()
+            
+            // Sohbeti de sil (Realtime Database)
+            val chatId = if (userId < friendId) "${userId}_${friendId}" else "${friendId}_${userId}"
+            database.getReference("chats").child(chatId).removeValue()
+            database.getReference("messages").child(chatId).removeValue()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing friend", e)
             Result.failure(e)
         }
     }

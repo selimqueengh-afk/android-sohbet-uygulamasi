@@ -75,10 +75,17 @@ class FriendsActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        friendsAdapter = FriendsAdapter(friendsList) { friend ->
-            // Open chat with selected friend
-            openChatWithFriend(friend)
-        }
+        friendsAdapter = FriendsAdapter(
+            friendsList,
+            onFriendClick = { friend ->
+                // Open chat with selected friend
+                openChatWithFriend(friend)
+            },
+            onFriendDelete = { friend ->
+                // Delete friend
+                showDeleteFriendDialog(friend)
+            }
+        )
         recyclerView.apply {
             layoutManager = LinearLayoutManager(this@FriendsActivity)
             adapter = friendsAdapter
@@ -226,6 +233,47 @@ class FriendsActivity : AppCompatActivity() {
             return users.find { it.username == friendName }
         }
         return null
+    }
+
+    private fun showDeleteFriendDialog(friend: Friend) {
+        AlertDialog.Builder(this)
+            .setTitle("Arkadaşı Sil")
+            .setMessage("${friend.name} arkadaşınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")
+            .setPositiveButton("Sil") { _, _ ->
+                deleteFriend(friend)
+            }
+            .setNegativeButton("İptal", null)
+            .show()
+    }
+
+    private fun deleteFriend(friend: Friend) {
+        lifecycleScope.launch {
+            try {
+                // Get friend user ID
+                val friendUser = getFriendUser(friend.name)
+                if (friendUser != null) {
+                    val result = firebaseService.removeFriend(currentUserId, friendUser.id)
+                    if (result.isSuccess) {
+                        runOnUiThread {
+                            Toast.makeText(this@FriendsActivity, "${friend.name} arkadaşınızdan silindi", Toast.LENGTH_SHORT).show()
+                            loadFriendsFromFirebase() // Refresh list
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(this@FriendsActivity, "Arkadaş silinemedi", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this@FriendsActivity, "Kullanıcı bulunamadı", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@FriendsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     private fun loadFriendsFromFirebase() {
