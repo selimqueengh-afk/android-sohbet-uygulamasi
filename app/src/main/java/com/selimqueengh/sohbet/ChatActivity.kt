@@ -170,8 +170,34 @@ class ChatActivity : AppCompatActivity() {
 
     private fun setupRealtimeMessageListener() {
         if (chatId.isNotEmpty()) {
+            // Firestore'dan mesajları dinle (kalıcı kayıtlar için)
+            firebaseService.listenToMessages(chatId) { chatMessage ->
+                val message = Message(
+                    text = chatMessage.content,
+                    sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
+                    isSentByUser = chatMessage.senderId == currentUserId,
+                    timestamp = chatMessage.timestamp,
+                    messageType = chatMessage.messageType,
+                    mediaUrl = chatMessage.mediaUrl,
+                    mediaType = chatMessage.mediaType
+                )
+                
+                // Add message to list and update UI
+                runOnUiThread {
+                    // Check if message already exists to avoid duplicates
+                    val existingMessage = messageList.find { 
+                        it.text == message.text && it.timestamp == message.timestamp 
+                    }
+                    if (existingMessage == null) {
+                        messageList.add(message)
+                        messageAdapter.notifyItemInserted(messageList.size - 1)
+                        recyclerView.scrollToPosition(messageList.size - 1)
+                    }
+                }
+            }
+            
+            // Realtime Database'den de dinle (gerçek zamanlı güncellemeler için)
             firebaseService.listenToRealtimeMessages(chatId) { messageData ->
-                // Convert message data to Message
                 val message = Message(
                     text = messageData["content"] as? String ?: "",
                     sender = if (messageData["senderId"] as? String == currentUserId) "Ben" else messageData["senderUsername"] as? String ?: "",
@@ -202,23 +228,33 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
-                // Realtime Database'e mesaj gönder
-                firebaseService.sendRealtimeMessage(chatId, currentUserId, currentUsername, messageText)
-                messageEditText.text.clear()
-                
-                // UI'da mesajı hemen göster
-                val message = Message(
-                    text = messageText,
-                    sender = "Ben",
-                    isSentByUser = true,
-                    timestamp = System.currentTimeMillis(),
-                    messageType = "text",
-                    mediaUrl = "",
-                    mediaType = ""
-                )
-                messageList.add(message)
-                messageAdapter.notifyItemInserted(messageList.size - 1)
-                recyclerView.scrollToPosition(messageList.size - 1)
+                lifecycleScope.launch {
+                    try {
+                        // Firestore'a mesaj gönder (kalıcı kayıt için)
+                        val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageText)
+                        if (result.isSuccess) {
+                            messageEditText.text.clear()
+                            
+                            // UI'da mesajı hemen göster
+                            val message = Message(
+                                text = messageText,
+                                sender = "Ben",
+                                isSentByUser = true,
+                                timestamp = System.currentTimeMillis(),
+                                messageType = "text",
+                                mediaUrl = "",
+                                mediaType = ""
+                            )
+                            messageList.add(message)
+                            messageAdapter.notifyItemInserted(messageList.size - 1)
+                            recyclerView.scrollToPosition(messageList.size - 1)
+                        } else {
+                            Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
             } else {
                 Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
             }

@@ -443,9 +443,23 @@ class FirebaseService {
                 "isDelivered" to false
             )
             
+            // Hem Firestore'a hem Realtime Database'e kaydet
             firestore.collection(MESSAGES_COLLECTION)
                 .add(messageData)
                 .await()
+            
+            // Realtime Database'e de kaydet
+            val realtimeMessage = hashMapOf(
+                "senderId" to senderId,
+                "senderUsername" to senderUsername,
+                "content" to content,
+                "messageType" to "text",
+                "timestamp" to System.currentTimeMillis(),
+                "isRead" to false,
+                "isDelivered" to false
+            )
+            
+            database.getReference("messages").child(chatId).push().setValue(realtimeMessage)
             
             // Chat'in son mesajını güncelle
             updateChatLastMessage(chatId, content)

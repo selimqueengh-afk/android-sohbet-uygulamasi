@@ -19,6 +19,18 @@
           ".write": "auth != null && auth.uid == $senderUid"
         }
       }
+    },
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "chats": {
+      "$chatId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     }
   }
 }
