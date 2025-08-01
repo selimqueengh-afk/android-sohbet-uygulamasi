@@ -76,42 +76,57 @@ class MainActivity : AppCompatActivity() {
         if (currentUserId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
-                    val result = firebaseService.getChats(currentUserId)
-                    if (result.isSuccess) {
-                        val chats = result.getOrNull() ?: emptyList()
-                        chatList.clear()
+                    // First get friends
+                    val friendsResult = firebaseService.getFriends(currentUserId)
+                    if (friendsResult.isSuccess) {
+                        val friends = friendsResult.getOrNull() ?: emptyList()
                         
-                        // Convert Firebase chats to ChatItem
-                        chats.forEach { chatData ->
-                            val otherUserId = if (chatData["user1Id"] == currentUserId) {
-                                chatData["user2Id"] as? String ?: ""
-                            } else {
-                                chatData["user1Id"] as? String ?: ""
-                            }
-                            
-                            if (otherUserId.isNotEmpty()) {
-                                // Get user info for display
-                                val userResult = firebaseService.getUsers()
-                                if (userResult.isSuccess) {
-                                    val users = userResult.getOrNull() ?: emptyList()
-                                    val otherUser = users.find { it.id == otherUserId }
+                        // Then get chats for each friend
+                        val chats = mutableListOf<ChatItem>()
+                        for (friend in friends) {
+                            val chatResult = firebaseService.getChats(currentUserId)
+                            if (chatResult.isSuccess) {
+                                val userChats = chatResult.getOrNull() ?: emptyList()
+                                val friendChat = userChats.find { chatData ->
+                                    val otherUserId = if (chatData["user1Id"] == currentUserId) {
+                                        chatData["user2Id"] as? String ?: ""
+                                    } else {
+                                        chatData["user1Id"] as? String ?: ""
+                                    }
+                                    otherUserId == friend.id
+                                }
+                                
+                                if (friendChat != null) {
+                                    val otherUserId = if (friendChat["user1Id"] == currentUserId) {
+                                        friendChat["user2Id"] as? String ?: ""
+                                    } else {
+                                        friendChat["user1Id"] as? String ?: ""
+                                    }
                                     
-                                    val chatItem = ChatItem(
-                                        chatId = chatData["chatId"] as? String ?: "",
-                                        username = otherUser?.username ?: "Bilinmeyen Kullanıcı",
-                                        lastMessage = chatData["lastMessageContent"] as? String ?: "Henüz mesaj yok",
-                                        timestamp = (chatData["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
-                                        unreadCount = 0, // TODO: Implement unread count
-                                        isOnline = otherUser?.isOnline ?: false
-                                    )
-                                    chatList.add(chatItem)
+                                    val userResult = firebaseService.getUsers()
+                                    if (userResult.isSuccess) {
+                                        val users = userResult.getOrNull() ?: emptyList()
+                                        val otherUser = users.find { it.id == otherUserId }
+                                        
+                                        val chatItem = ChatItem(
+                                            chatId = friendChat["chatId"] as? String ?: "",
+                                            username = otherUser?.username ?: friend.name,
+                                            lastMessage = friendChat["lastMessageContent"] as? String ?: "Henüz mesaj yok",
+                                            timestamp = (friendChat["lastMessageTimestamp"] as? java.util.Date)?.time ?: System.currentTimeMillis(),
+                                            unreadCount = 0,
+                                            isOnline = otherUser?.isOnline ?: false
+                                        )
+                                        chats.add(chatItem)
+                                    }
                                 }
                             }
                         }
                         
+                        chatList.clear()
+                        chatList.addAll(chats)
                         chatAdapter.notifyDataSetChanged()
                     } else {
-                        Toast.makeText(this@MainActivity, "Sohbetler yüklenemedi", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, "Arkadaşlar yüklenemedi", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
                     Toast.makeText(this@MainActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()

@@ -104,6 +104,23 @@ class FirebaseService {
         }
     }
 
+    suspend fun searchUserByUsername(username: String): Result<User?> {
+        return try {
+            val snapshot = firestore.collection(USERS_COLLECTION)
+                .whereEqualTo("username", username)
+                .get()
+                .await()
+            
+            val user = snapshot.documents.firstOrNull()?.let { doc ->
+                doc.toObject(User::class.java)?.copy(id = doc.id)
+            }
+            Result.success(user)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error searching user by username", e)
+            Result.failure(e)
+        }
+    }
+
     // Chat and messaging
     suspend fun sendMessage(message: ChatMessage): Result<Unit> {
         return try {
@@ -280,6 +297,27 @@ class FirebaseService {
             Result.success(requests)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting friend requests", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getPendingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
+        return try {
+            val snapshot = firestore.collection(FRIENDS_COLLECTION)
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("status", "pending")
+                .get()
+                .await()
+            
+            val requests = snapshot.documents.map { doc ->
+                doc.data?.toMutableMap()?.apply {
+                    put("requestId", doc.id)
+                } ?: mutableMapOf()
+            }
+            
+            Result.success(requests)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting pending friend requests", e)
             Result.failure(e)
         }
     }
