@@ -533,12 +533,23 @@ class FirebaseService {
             
             Log.d(TAG, "Getting messages for chatId: $chatId, user: ${currentUser.uid}")
             
-            val snapshot = firestore.collection(MESSAGES_COLLECTION)
-                .whereEqualTo("chatId", chatId)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(limit)
-                .get()
-                .await()
+            // Önce index olmadan deneyelim, sonra orderBy ekleyelim
+            val snapshot = try {
+                firestore.collection(MESSAGES_COLLECTION)
+                    .whereEqualTo("chatId", chatId)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(limit)
+                    .get()
+                    .await()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed with orderBy, trying without: ${e.message}")
+                // Index yoksa orderBy olmadan dene
+                firestore.collection(MESSAGES_COLLECTION)
+                    .whereEqualTo("chatId", chatId)
+                    .limit(limit)
+                    .get()
+                    .await()
+            }
             
             Log.d(TAG, "Found ${snapshot.documents.size} messages in Firestore")
             
@@ -567,7 +578,7 @@ class FirebaseService {
                         isDelivered = data["isDelivered"] as? Boolean ?: false
                     )
                 } else null
-            }.reversed()
+            }.sortedBy { it.timestamp }.reversed() // Memory'de sırala
             
             Log.d(TAG, "Processed ${messages.size} messages")
             Result.success(messages)
@@ -598,9 +609,9 @@ class FirebaseService {
     // ===== REAL-TIME DİNLEME =====
     
     fun listenToMessages(chatId: String, onMessage: (ChatMessage) -> Unit) {
+        // Index sorunu olmaması için orderBy kullanmıyoruz
         firestore.collection(MESSAGES_COLLECTION)
             .whereEqualTo("chatId", chatId)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     Log.e(TAG, "Error listening to messages", e)
