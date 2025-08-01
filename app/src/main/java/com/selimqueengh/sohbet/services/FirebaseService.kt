@@ -69,6 +69,11 @@ class FirebaseService {
     }
 
     fun signOut() {
+        // Çıkış yapmadan önce offline durumuna geç
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            setUserOffline(currentUser.uid)
+        }
         auth.signOut()
     }
 
@@ -108,6 +113,112 @@ class FirebaseService {
             Log.e(TAG, "Error creating user", e)
             Result.failure(e)
         }
+    }
+
+    // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
+    
+    suspend fun setUserOnline(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "status" to "ONLINE",
+                "isOnline" to true,
+                "lastSeen" to Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "User $userId set to ONLINE")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user online", e)
+        }
+    }
+    
+    suspend fun setUserOffline(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "status" to "OFFLINE",
+                "isOnline" to false,
+                "lastSeen" to Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "User $userId set to OFFLINE")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user offline", e)
+        }
+    }
+    
+    suspend fun updateLastSeen(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "lastSeen" to Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "Updated last seen for user $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating last seen", e)
+        }
+    }
+    
+    suspend fun getUserStatus(userId: String): Result<User> {
+        return try {
+            val document = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            if (document.exists()) {
+                val data = document.data
+                if (data != null) {
+                    val user = User(
+                        id = document.id,
+                        username = data["username"] as? String ?: "",
+                        displayName = data["displayName"] as? String ?: "",
+                        avatarUrl = data["avatarUrl"] as? String,
+                        status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                        lastSeen = data["lastSeen"],
+                        isOnline = data["isOnline"] as? Boolean ?: false,
+                        isTyping = data["isTyping"] as? Boolean ?: false,
+                        typingTo = data["typingTo"] as? String
+                    )
+                    Result.success(user)
+                } else {
+                    Result.failure(Exception("User data is null"))
+                }
+            } else {
+                Result.failure(Exception("User not found"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user status", e)
+            Result.failure(e)
+        }
+    }
+    
+    fun listenToUserStatus(userId: String, onStatusChange: (User) -> Unit) {
+        firestore.collection(USERS_COLLECTION)
+            .document(userId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error listening to user status", e)
+                    return@addSnapshotListener
+                }
+                
+                snapshot?.toObject(User::class.java)?.let { user ->
+                    onStatusChange(user.copy(id = snapshot.id))
+                }
+            }
     }
 
     suspend fun updateUserStatus(userId: String, isOnline: Boolean, status: String) {

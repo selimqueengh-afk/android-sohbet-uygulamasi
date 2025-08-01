@@ -34,6 +34,9 @@ class MainActivity : AppCompatActivity() {
         
         initViews()
         setupClickListeners()
+        
+        // Kullanıcıyı online yap
+        setUserOnline()
     }
 
     private fun initViews() {
@@ -93,5 +96,41 @@ class MainActivity : AppCompatActivity() {
             // Refresh chats when returning from friend requests
             showChatsFragment()
         }
+    }
+    
+    // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
+    
+    private fun setUserOnline() {
+        if (currentUserId.isNotEmpty()) {
+            lifecycleScope.launch {
+                firebaseService.setUserOnline(currentUserId)
+            }
+        }
+    }
+    
+    private fun setUserOffline() {
+        if (currentUserId.isNotEmpty()) {
+            lifecycleScope.launch {
+                firebaseService.setUserOffline(currentUserId)
+            }
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Uygulama ön plana geldiğinde online yap
+        setUserOnline()
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Uygulama arka plana geçtiğinde offline yap
+        setUserOffline()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Uygulama kapatıldığında offline yap
+        setUserOffline()
     }
 }

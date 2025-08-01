@@ -288,9 +288,13 @@ class FriendsActivity : AppCompatActivity() {
                         
                         friends.forEach { friendUser ->
                             val friend = Friend(
-                                name = friendUser.username,
-                                status = if (friendUser.isOnline) "Online" else "Offline",
-                                avatar = "avatar_default"
+                                id = friendUser.id,
+                                name = friendUser.displayName,
+                                username = friendUser.username,
+                                status = friendUser.status.name,
+                                avatar = friendUser.avatarUrl ?: "",
+                                isOnline = friendUser.isOnline,
+                                lastSeen = friendUser.lastSeen
                             )
                             friendsList.add(friend)
                         }
