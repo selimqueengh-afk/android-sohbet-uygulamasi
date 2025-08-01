@@ -1,5 +1,9 @@
 package com.selimqueengh.sohbet
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class ChatItem(
     val chatId: String,
     val username: String,
@@ -8,4 +12,4 @@ data class ChatItem(
     val unreadCount: Int = 0,
     val isOnline: Boolean = false,
     val profileImage: String? = null
-)
+) : Parcelable
