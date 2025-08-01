@@ -226,6 +226,43 @@ class FirebaseService {
                 }
             }
     }
+    
+    // ===== TYPING INDICATOR =====
+    
+    suspend fun setUserTyping(userId: String, isTyping: Boolean, typingTo: String? = null) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "isTyping" to isTyping,
+                "typingTo" to (typingTo ?: "")
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "User $userId typing status: $isTyping")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user typing status", e)
+        }
+    }
+    
+    fun listenToUserTyping(userId: String, onTypingChange: (Boolean, String?) -> Unit) {
+        firestore.collection(USERS_COLLECTION)
+            .document(userId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error listening to user typing", e)
+                    return@addSnapshotListener
+                }
+                
+                snapshot?.data?.let { data ->
+                    val isTyping = data["isTyping"] as? Boolean ?: false
+                    val typingTo = data["typingTo"] as? String
+                    onTypingChange(isTyping, typingTo)
+                }
+            }
+    }
 
     suspend fun updateUserStatus(userId: String, isOnline: Boolean, status: String) {
         try {

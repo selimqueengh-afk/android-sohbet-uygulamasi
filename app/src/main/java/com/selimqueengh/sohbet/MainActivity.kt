@@ -101,17 +101,19 @@ class MainActivity : AppCompatActivity() {
     // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
     
     private fun setUserOnline() {
-        if (currentUserId.isNotEmpty()) {
+        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+        if (realCurrentUserId.isNotEmpty()) {
             lifecycleScope.launch {
-                firebaseService.setUserOnline(currentUserId)
+                firebaseService.setUserOnline(realCurrentUserId)
             }
         }
     }
     
     private fun setUserOffline() {
-        if (currentUserId.isNotEmpty()) {
+        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+        if (realCurrentUserId.isNotEmpty()) {
             lifecycleScope.launch {
-                firebaseService.setUserOffline(currentUserId)
+                firebaseService.setUserOffline(realCurrentUserId)
             }
         }
     }

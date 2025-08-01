@@ -36,6 +36,7 @@ class ChatActivity : AppCompatActivity() {
     private var currentUsername: String = ""
     private var partnerUserId: String = ""
     private var partnerUser: com.selimqueengh.sohbet.models.User? = null
+    private var isPartnerTyping: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,6 +141,27 @@ class ChatActivity : AppCompatActivity() {
                 partnerUser = user
                 updateChatTitle()
             }
+            
+            // Listen to typing indicator
+            firebaseService.listenToUserTyping(partnerUserId) { isTyping, typingTo ->
+                isPartnerTyping = isTyping && typingTo == chatId
+                updateTypingIndicator()
+            }
+        }
+    }
+    
+    private fun updateTypingIndicator() {
+        runOnUiThread {
+            if (isPartnerTyping) {
+                // Show typing indicator
+                val typingView = findViewById<TextView>(R.id.typingIndicator)
+                typingView?.visibility = android.view.View.VISIBLE
+                typingView?.text = "🟡 Yazıyor..."
+            } else {
+                // Hide typing indicator
+                val typingView = findViewById<TextView>(R.id.typingIndicator)
+                typingView?.visibility = android.view.View.GONE
+            }
         }
     }
     
@@ -201,6 +223,20 @@ class ChatActivity : AppCompatActivity() {
         attachButton.setOnClickListener {
             showAttachmentDialog()
         }
+        
+        // Add typing indicator
+        messageEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                if (realCurrentUserId.isNotEmpty() && partnerUserId.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        firebaseService.setUserTyping(realCurrentUserId, s?.isNotEmpty() == true, chatId)
+                    }
+                }
+            }
+        })
     }
 
     private fun loadMessages() {
@@ -228,10 +264,14 @@ class ChatActivity : AppCompatActivity() {
                         
                         // Convert ChatMessage to Message for adapter
                         messages.forEach { chatMessage ->
+                            // Firebase Auth'dan gerçek user ID'yi al
+                            val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                            val isSentByCurrentUser = chatMessage.senderId == realCurrentUserId
+                            
                             val message = Message(
                                 text = chatMessage.content,
-                                sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
-                                isSentByUser = chatMessage.senderId == currentUserId,
+                                sender = if (isSentByCurrentUser) "Ben" else chatMessage.senderUsername,
+                                isSentByUser = isSentByCurrentUser,
                                 timestamp = chatMessage.timestamp,
                                 messageType = chatMessage.messageType,
                                 mediaUrl = chatMessage.mediaUrl,
@@ -268,10 +308,14 @@ class ChatActivity : AppCompatActivity() {
         if (chatId.isNotEmpty()) {
             // Sadece Firestore'dan mesajları dinle (duplicate olmaması için)
             firebaseService.listenToMessages(chatId) { chatMessage ->
+                // Firebase Auth'dan gerçek user ID'yi al
+                val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                val isSentByCurrentUser = chatMessage.senderId == realCurrentUserId
+                
                 val message = Message(
                     text = chatMessage.content,
-                    sender = if (chatMessage.senderId == currentUserId) "Ben" else chatMessage.senderUsername,
-                    isSentByUser = chatMessage.senderId == currentUserId,
+                    sender = if (isSentByCurrentUser) "Ben" else chatMessage.senderUsername,
+                    isSentByUser = isSentByCurrentUser,
                     timestamp = chatMessage.timestamp,
                     messageType = chatMessage.messageType,
                     mediaUrl = chatMessage.mediaUrl,
@@ -300,8 +344,11 @@ class ChatActivity : AppCompatActivity() {
             if (chatId.isNotEmpty()) {
                 lifecycleScope.launch {
                     try {
+                        // Firebase Auth'dan gerçek user ID'yi al
+                        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                        
                         // Firestore'a mesaj gönder (kalıcı kayıt için)
-                        val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageText)
+                        val result = firebaseService.sendMessage(chatId, realCurrentUserId, currentUsername, messageText)
                         if (result.isSuccess) {
                             messageEditText.text.clear()
                             // UI'da hemen gösterme - real-time listener'dan gelecek
