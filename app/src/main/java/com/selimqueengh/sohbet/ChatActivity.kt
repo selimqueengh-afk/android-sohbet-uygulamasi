@@ -191,7 +191,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun setupRealtimeMessageListener() {
         if (chatId.isNotEmpty()) {
-            // Firestore'dan mesajları dinle (kalıcı kayıtlar için)
+            // Sadece Firestore'dan mesajları dinle (duplicate olmaması için)
             firebaseService.listenToMessages(chatId) { chatMessage ->
                 val message = Message(
                     text = chatMessage.content,
@@ -201,32 +201,6 @@ class ChatActivity : AppCompatActivity() {
                     messageType = chatMessage.messageType,
                     mediaUrl = chatMessage.mediaUrl,
                     mediaType = chatMessage.mediaType
-                )
-                
-                // Add message to list and update UI
-                runOnUiThread {
-                    // Check if message already exists to avoid duplicates
-                    val existingMessage = messageList.find { 
-                        it.text == message.text && it.timestamp == message.timestamp 
-                    }
-                    if (existingMessage == null) {
-                        messageList.add(message)
-                        messageAdapter.notifyItemInserted(messageList.size - 1)
-                        recyclerView.scrollToPosition(messageList.size - 1)
-                    }
-                }
-            }
-            
-            // Realtime Database'den de dinle (gerçek zamanlı güncellemeler için)
-            firebaseService.listenToRealtimeMessages(chatId) { messageData ->
-                val message = Message(
-                    text = messageData["content"] as? String ?: "",
-                    sender = if (messageData["senderId"] as? String == currentUserId) "Ben" else messageData["senderUsername"] as? String ?: "",
-                    isSentByUser = messageData["senderId"] as? String == currentUserId,
-                    timestamp = messageData["timestamp"] as? Long ?: 0,
-                    messageType = messageData["messageType"] as? String ?: "text",
-                    mediaUrl = messageData["mediaUrl"] as? String ?: "",
-                    mediaType = messageData["mediaType"] as? String ?: ""
                 )
                 
                 // Add message to list and update UI
@@ -255,20 +229,8 @@ class ChatActivity : AppCompatActivity() {
                         val result = firebaseService.sendMessage(chatId, currentUserId, currentUsername, messageText)
                         if (result.isSuccess) {
                             messageEditText.text.clear()
-                            
-                            // UI'da mesajı hemen göster
-                            val message = Message(
-                                text = messageText,
-                                sender = "Ben",
-                                isSentByUser = true,
-                                timestamp = System.currentTimeMillis(),
-                                messageType = "text",
-                                mediaUrl = "",
-                                mediaType = ""
-                            )
-                            messageList.add(message)
-                            messageAdapter.notifyItemInserted(messageList.size - 1)
-                            recyclerView.scrollToPosition(messageList.size - 1)
+                            // UI'da hemen gösterme - real-time listener'dan gelecek
+                            // Bu şekilde duplicate olmayacak
                         } else {
                             Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
                         }
