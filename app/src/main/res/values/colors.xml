@@ -23,6 +23,7 @@
     <color name="message_other_background">#E5E7EB</color>
     <color name="message_user_text">#FFFFFF</color>
     <color name="message_other_text">#1F2937</color>
+    <color name="chat_background">#F8F9FA</color>
     
     <!-- Status Colors -->
     <color name="online_color">#10B981</color>
