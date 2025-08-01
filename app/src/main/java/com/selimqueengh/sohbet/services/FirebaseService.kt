@@ -7,7 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.Timestamp
 import com.google.firebase.messaging.FirebaseMessaging
-import com.selimqueengh.sohbet.models.ChatMessage
+
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.UserStatus
 import kotlinx.coroutines.tasks.await
