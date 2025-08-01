@@ -152,15 +152,14 @@ class ChatActivity : AppCompatActivity() {
     
     private fun updateTypingIndicator() {
         runOnUiThread {
+            val statusView = findViewById<TextView>(R.id.chatStatusText)
             if (isPartnerTyping) {
                 // Show typing indicator
-                val typingView = findViewById<TextView>(R.id.typingIndicator)
-                typingView?.visibility = android.view.View.VISIBLE
-                typingView?.text = "🟡 Yazıyor..."
+                statusView?.text = "🟡 Yazıyor..."
+                statusView?.visibility = android.view.View.VISIBLE
             } else {
-                // Hide typing indicator
-                val typingView = findViewById<TextView>(R.id.typingIndicator)
-                typingView?.visibility = android.view.View.GONE
+                // Hide typing indicator and show normal status
+                updateChatTitle()
             }
         }
     }
@@ -195,7 +194,8 @@ class ChatActivity : AppCompatActivity() {
             }
             
             runOnUiThread {
-                chatTitleText.text = "${user.displayName} • $statusText"
+                chatTitleText.text = user.displayName
+                findViewById<TextView>(R.id.chatStatusText)?.text = statusText
             }
         }
     }
