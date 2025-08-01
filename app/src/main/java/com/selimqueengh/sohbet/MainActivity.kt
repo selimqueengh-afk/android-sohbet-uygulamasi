@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
     
     private lateinit var recyclerView: RecyclerView
-    private lateinit var fabAddFriend: FloatingActionButton
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var firebaseService: FirebaseService
     private lateinit var sharedPreferences: SharedPreferences
@@ -49,7 +48,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewChats)
-        fabAddFriend = findViewById(R.id.fabAddFriend)
         
         // Toolbar'ı ayarla
         val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
@@ -71,11 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        fabAddFriend.setOnClickListener {
-            // Arkadaş ekleme ekranına git
-            val intent = Intent(this, FriendsActivity::class.java)
-            startActivity(intent)
-        }
+        // FAB removed - moved to friends page
     }
     
     private fun loadChatsFromFirebase() {

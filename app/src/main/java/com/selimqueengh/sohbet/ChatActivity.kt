@@ -50,6 +50,7 @@ class ChatActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         setupClickListeners()
+        setupToolbar()
         
         // Load messages from Firebase
         loadMessages()
@@ -69,6 +70,13 @@ class ChatActivity : AppCompatActivity() {
         
         // Set chat title
         chatTitleText.text = chatPartnerName
+    }
+
+    private fun setupToolbar() {
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.chatToolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
     }
 
     private fun setupRecyclerView() {
@@ -271,6 +279,16 @@ class ChatActivity : AppCompatActivity() {
             }
         } else {
             Toast.makeText(this, "Sohbet bulunamadı", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

@@ -65,9 +65,21 @@ class LoginActivity : AppCompatActivity() {
         val fadeIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in)
         fadeIn.duration = 1000
         
+        // Slide up animasyonu
+        val slideUp = AnimationUtils.loadAnimation(this, R.anim.slide_up)
+        slideUp.duration = 800
+        
         // Views'leri animasyonla göster
         usernameLayout.startAnimation(fadeIn)
-        loginButton.startAnimation(fadeIn)
+        loginButton.startAnimation(slideUp)
+        
+        // Logo animasyonu
+        val logo = findViewById<android.widget.ImageView>(R.id.logoImage)
+        logo?.let {
+            val scaleAnimation = AnimationUtils.loadAnimation(this, R.anim.scale_in)
+            scaleAnimation.duration = 1200
+            it.startAnimation(scaleAnimation)
+        }
     }
     
     private fun setupListeners() {

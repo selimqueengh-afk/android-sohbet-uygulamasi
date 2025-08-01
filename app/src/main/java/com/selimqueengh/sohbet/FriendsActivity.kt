@@ -40,6 +40,7 @@ class FriendsActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         setupClickListeners()
+        setupToolbar()
         
         // Load friends from Firebase
         loadFriendsFromFirebase()
@@ -48,6 +49,13 @@ class FriendsActivity : AppCompatActivity() {
     private fun initViews() {
         recyclerView = findViewById(R.id.recyclerViewFriends)
         addFriendButton = findViewById(R.id.addFriendButton)
+    }
+
+    private fun setupToolbar() {
+        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.friendsToolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
     }
 
     private fun setupRecyclerView() {
@@ -84,15 +92,20 @@ class FriendsActivity : AppCompatActivity() {
         searchButton.setOnClickListener {
             val username = usernameEditText.text.toString().trim()
             if (username.isNotEmpty()) {
+                searchButton.text = "Aranıyor..."
+                searchButton.isEnabled = false
                 searchUser(username) { user ->
                     foundUser = user
                     if (user != null) {
-                        searchButton.text = "Kullanıcı Bulundu"
+                        searchButton.text = "✓ Kullanıcı Bulundu"
+                        searchButton.setBackgroundColor(resources.getColor(android.R.color.holo_green_light, null))
                         sendRequestButton.visibility = android.view.View.VISIBLE
                     } else {
-                        searchButton.text = "Kullanıcı Bulunamadı"
+                        searchButton.text = "✗ Kullanıcı Bulunamadı"
+                        searchButton.setBackgroundColor(resources.getColor(android.R.color.holo_red_light, null))
                         sendRequestButton.visibility = android.view.View.GONE
                     }
+                    searchButton.isEnabled = true
                 }
             } else {
                 Toast.makeText(this, "Kullanıcı adı girin", Toast.LENGTH_SHORT).show()
@@ -108,6 +121,14 @@ class FriendsActivity : AppCompatActivity() {
             }
         }
         
+        // Test için kullanıcı oluşturma butonu (geliştirme aşamasında)
+        val testButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.testCreateUserButton)
+        testButton?.setOnClickListener {
+            createTestUser {
+                Toast.makeText(this@FriendsActivity, "Test kullanıcısı oluşturuldu", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
         dialog.show()
     }
 
@@ -117,21 +138,30 @@ class FriendsActivity : AppCompatActivity() {
                 val result = firebaseService.getUsers()
                 if (result.isSuccess) {
                     val users = result.getOrNull() ?: emptyList()
+                    Log.d("FriendsActivity", "Found ${users.size} users in database")
+                    users.forEach { user ->
+                        Log.d("FriendsActivity", "User: ${user.username}, ID: ${user.id}")
+                    }
+                    
                     val user = users.find { it.username.equals(username, ignoreCase = true) }
                     
                     runOnUiThread {
                         if (user != null && user.id != currentUserId) {
+                            Log.d("FriendsActivity", "Found user: ${user.username}")
                             callback(user)
                         } else {
+                            Log.d("FriendsActivity", "User not found or is current user")
                             callback(null)
                         }
                     }
                 } else {
+                    Log.e("FriendsActivity", "Failed to get users: ${result.exceptionOrNull()?.message}")
                     runOnUiThread {
                         callback(null)
                     }
                 }
             } catch (e: Exception) {
+                Log.e("FriendsActivity", "Error searching user", e)
                 runOnUiThread {
                     callback(null)
                 }
@@ -224,6 +254,44 @@ class FriendsActivity : AppCompatActivity() {
                         Toast.makeText(this@FriendsActivity, "Arkadaşlar yüklenemedi", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
+                    Toast.makeText(this@FriendsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun createTestUser(callback: () -> Unit) {
+        lifecycleScope.launch {
+            try {
+                val testUser = com.selimqueengh.sohbet.models.User(
+                    username = "testuser",
+                    displayName = "Test User",
+                    status = com.selimqueengh.sohbet.models.UserStatus.ONLINE,
+                    isOnline = true
+                )
+                
+                val result = firebaseService.createUser(testUser)
+                if (result.isSuccess) {
+                    runOnUiThread {
+                        callback()
+                    }
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this@FriendsActivity, "Test kullanıcısı oluşturulamadı", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
                     Toast.makeText(this@FriendsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
