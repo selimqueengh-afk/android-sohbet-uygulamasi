@@ -35,6 +35,15 @@ class LoginActivity : AppCompatActivity() {
     private fun initViews() {
         usernameEditText = findViewById(R.id.usernameEditText)
         loginButton = findViewById(R.id.loginButton)
+        
+        // TextInputEditText'ten text'i almak için
+        usernameEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                loginButton.isEnabled = !s.isNullOrEmpty() && s.length >= 3
+            }
+        })
     }
 
     private fun setupAnimations() {
