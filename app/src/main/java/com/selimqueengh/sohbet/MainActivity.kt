@@ -158,4 +158,12 @@ class MainActivity : AppCompatActivity() {
         // Refresh chats when returning to this activity
         loadChatsFromFirebase()
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_OK) {
+            // Refresh chats when returning from friend requests
+            loadChatsFromFirebase()
+        }
+    }
 }

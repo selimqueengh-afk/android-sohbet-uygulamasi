@@ -270,7 +270,7 @@ class FriendsActivity : AppCompatActivity() {
             }
             R.id.action_friend_requests -> {
                 val intent = Intent(this, FriendRequestsActivity::class.java)
-                startActivity(intent)
+                startActivityForResult(intent, 1001)
                 true
             }
             else -> super.onOptionsItemSelected(item)
