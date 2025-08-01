@@ -110,7 +110,9 @@ class FriendRequestsActivity : AppCompatActivity() {
                 val result = firebaseService.acceptFriendRequest(requestId)
                 if (result.isSuccess) {
                     Toast.makeText(this@FriendRequestsActivity, "İstek kabul edildi", Toast.LENGTH_SHORT).show()
-                    loadFriendRequests() // Refresh list
+                    
+                    // Sohbet oluştur
+                    createChatForAcceptedRequest(requestId)
                     
                     // Ana sayfaya dön ve sohbet listesini yenile
                     setResult(RESULT_OK)
@@ -120,6 +122,31 @@ class FriendRequestsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@FriendRequestsActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun createChatForAcceptedRequest(requestId: String) {
+        lifecycleScope.launch {
+            try {
+                // İsteğin detaylarını al
+                val requestDoc = firebaseService.firestore.collection("friend_requests")
+                    .document(requestId)
+                    .get()
+                    .await()
+                
+                val fromUserId = requestDoc.getString("fromUserId") ?: ""
+                val toUserId = requestDoc.getString("toUserId") ?: ""
+                
+                // Sohbet oluştur
+                val chatResult = firebaseService.createChat(fromUserId, toUserId)
+                if (chatResult.isSuccess) {
+                    Log.d("FriendRequestsActivity", "Chat created successfully")
+                } else {
+                    Log.e("FriendRequestsActivity", "Failed to create chat")
+                }
+            } catch (e: Exception) {
+                Log.e("FriendRequestsActivity", "Error creating chat", e)
             }
         }
     }

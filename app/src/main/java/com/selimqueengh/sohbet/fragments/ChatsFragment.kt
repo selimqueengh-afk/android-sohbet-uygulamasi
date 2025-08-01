@@ -5,22 +5,21 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.selimqueengh.sohbet.ChatActivity
 import com.selimqueengh.sohbet.ChatAdapter
-import com.selimqueengh.sohbet.models.ChatItem
-import com.selimqueengh.sohbet.FriendsActivity
 import com.selimqueengh.sohbet.R
+import com.selimqueengh.sohbet.models.ChatItem
 
 class ChatsFragment : Fragment() {
     
     private lateinit var recyclerView: RecyclerView
-    private lateinit var fabNewChat: FloatingActionButton
+    private lateinit var emptyStateText: TextView
     private lateinit var chatAdapter: ChatAdapter
-    private val chatList = mutableListOf<com.selimqueengh.sohbet.models.ChatItem>()
+    private val chatList = mutableListOf<ChatItem>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_chats, container, false)
@@ -30,13 +29,12 @@ class ChatsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         initViews(view)
         setupRecyclerView()
-        setupClickListeners()
-        loadSampleChats()
+        loadChats()
     }
 
     private fun initViews(view: View) {
         recyclerView = view.findViewById(R.id.recyclerViewChats)
-        fabNewChat = view.findViewById(R.id.fabNewChat)
+        emptyStateText = view.findViewById(R.id.emptyStateText)
     }
 
     private fun setupRecyclerView() {
@@ -52,15 +50,19 @@ class ChatsFragment : Fragment() {
         }
     }
 
-    private fun setupClickListeners() {
-        fabNewChat.setOnClickListener {
-            val intent = Intent(requireContext(), FriendsActivity::class.java)
-            startActivity(intent)
+    private fun loadChats() {
+        // TODO: Load chats from Firebase
+        if (chatList.isEmpty()) {
+            emptyStateText.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+        } else {
+            emptyStateText.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
         }
     }
 
-    private fun loadSampleChats() {
-        // Demo chats removed - will load from Firebase
-        chatAdapter.notifyDataSetChanged()
+    override fun onResume() {
+        super.onResume()
+        loadChats()
     }
 }

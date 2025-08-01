@@ -10,7 +10,8 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary_color">
+        android:background="@color/primary_color"
+        android:elevation="4dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -22,48 +23,12 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Chat List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewChats"
+    <!-- Content Area -->
+    <FrameLayout
+        android:id="@+id/contentFrame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
-        android:clipToPadding="false"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
-
-    <!-- Empty State -->
-    <LinearLayout
-        android:id="@+id/emptyStateLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <ImageView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:src="@drawable/ic_chat_empty"
-            android:alpha="0.5" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Henüz sohbet yok"
-            android:textSize="18sp"
-            android:textColor="@color/text_secondary" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Arkadaş ekleyerek sohbet etmeye başlayın"
-            android:textSize="14sp"
-            android:textColor="@color/text_hint" />
-
-    </LinearLayout>
 
     <!-- Bottom Navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -72,8 +37,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:background="@color/white"
+        android:elevation="8dp"
         app:menu="@menu/bottom_navigation_menu"
         app:itemIconTint="@color/bottom_nav_item_color"
-        app:itemTextColor="@color/bottom_nav_item_color" />
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:labelVisibilityMode="labeled" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
