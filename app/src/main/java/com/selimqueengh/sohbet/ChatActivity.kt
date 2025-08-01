@@ -34,6 +34,8 @@ class ChatActivity : AppCompatActivity() {
     private var chatId: String = ""
     private var currentUserId: String = ""
     private var currentUsername: String = ""
+    private var partnerUserId: String = ""
+    private var partnerUser: com.selimqueengh.sohbet.models.User? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,9 @@ class ChatActivity : AppCompatActivity() {
         if (chatId.isEmpty()) {
             createChatWithPartner()
         } else {
+            // Load partner user info and setup status listener
+            loadPartnerUserInfo()
+            
             // Load messages from Firebase
             loadMessages()
             
@@ -74,9 +79,16 @@ class ChatActivity : AppCompatActivity() {
                 if (partnerResult.isSuccess) {
                     val partnerUser = partnerResult.getOrNull()
                     if (partnerUser != null) {
+                        // Store partner user info
+                        this@ChatActivity.partnerUser = partnerUser
+                        partnerUserId = partnerUser.id
+                        
                         // Create Realtime Database chat
                         chatId = firebaseService.createRealtimeChat(currentUserId, partnerUser.id)
                         Log.d("ChatActivity", "Realtime chat created with ID: $chatId")
+                        
+                        // Setup status listener
+                        setupPartnerStatusListener()
                         
                         // Now setup message listener
                         setupRealtimeMessageListener()
@@ -99,8 +111,71 @@ class ChatActivity : AppCompatActivity() {
         attachButton = findViewById(R.id.buttonAttach)
         chatTitleText = findViewById(R.id.chatTitleText)
         
-        // Set chat title
+        // Set initial chat title
         chatTitleText.text = chatPartnerName
+    }
+    
+    private fun loadPartnerUserInfo() {
+        lifecycleScope.launch {
+            try {
+                // Get partner user info
+                val partnerResult = firebaseService.searchUserByUsername(chatPartnerName)
+                if (partnerResult.isSuccess) {
+                    partnerUser = partnerResult.getOrNull()
+                    if (partnerUser != null) {
+                        partnerUserId = partnerUser!!.id
+                        // Setup status listener
+                        setupPartnerStatusListener()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ChatActivity", "Error loading partner user info", e)
+            }
+        }
+    }
+    
+    private fun setupPartnerStatusListener() {
+        if (partnerUserId.isNotEmpty()) {
+            firebaseService.listenToUserStatus(partnerUserId) { user ->
+                partnerUser = user
+                updateChatTitle()
+            }
+        }
+    }
+    
+    private fun updateChatTitle() {
+        partnerUser?.let { user ->
+            val statusText = if (user.isOnline) {
+                "🟢 Çevrimiçi"
+            } else {
+                // Son görülme zamanını hesapla
+                when (val lastSeen = user.lastSeen) {
+                    is com.google.firebase.Timestamp -> {
+                        val timeDiff = System.currentTimeMillis() - lastSeen.toDate().time
+                        when {
+                            timeDiff < 60000 -> "🟡 Az önce" // 1 dakika
+                            timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce" // 1 saat
+                            timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce" // 1 gün
+                            else -> "⚫ ${timeDiff / 86400000} gün önce"
+                        }
+                    }
+                    is Long -> {
+                        val timeDiff = System.currentTimeMillis() - lastSeen
+                        when {
+                            timeDiff < 60000 -> "🟡 Az önce"
+                            timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce"
+                            timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce"
+                            else -> "⚫ ${timeDiff / 86400000} gün önce"
+                        }
+                    }
+                    else -> "⚫ Çevrimdışı"
+                }
+            }
+            
+            runOnUiThread {
+                chatTitleText.text = "${user.displayName} • $statusText"
+            }
+        }
     }
 
     private fun setupToolbar() {
