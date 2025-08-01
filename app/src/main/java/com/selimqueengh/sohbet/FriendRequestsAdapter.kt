@@ -10,31 +10,32 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class FriendRequestsAdapter(
-    private val requests: List<FriendRequest>,
+    private val requestsList: List<FriendRequest>,
     private val onActionClick: (FriendRequest, String) -> Unit
-) : RecyclerView.Adapter<FriendRequestsAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<FriendRequestsAdapter.RequestViewHolder>() {
 
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val usernameText: TextView = view.findViewById(R.id.usernameText)
-        val timeText: TextView = view.findViewById(R.id.timeText)
-        val acceptButton: Button = view.findViewById(R.id.acceptButton)
-        val rejectButton: Button = view.findViewById(R.id.rejectButton)
+    class RequestViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val usernameText: TextView = itemView.findViewById(R.id.usernameText)
+        val timestampText: TextView = itemView.findViewById(R.id.timestampText)
+        val acceptButton: Button = itemView.findViewById(R.id.acceptButton)
+        val rejectButton: Button = itemView.findViewById(R.id.rejectButton)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RequestViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_friend_request, parent, false)
-        return ViewHolder(view)
+        return RequestViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val request = requests[position]
+    override fun onBindViewHolder(holder: RequestViewHolder, position: Int) {
+        val request = requestsList[position]
         
         holder.usernameText.text = request.senderUsername
         
-        val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        // Format timestamp
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
         val date = Date(request.timestamp)
-        holder.timeText.text = dateFormat.format(date)
+        holder.timestampText.text = dateFormat.format(date)
         
         holder.acceptButton.setOnClickListener {
             onActionClick(request, "accept")
@@ -45,5 +46,5 @@ class FriendRequestsAdapter(
         }
     }
 
-    override fun getItemCount() = requests.size
+    override fun getItemCount(): Int = requestsList.size
 }
