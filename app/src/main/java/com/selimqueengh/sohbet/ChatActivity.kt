@@ -1,6 +1,8 @@
 package com.selimqueengh.sohbet
 
 import android.content.SharedPreferences
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
@@ -37,6 +39,11 @@ class ChatActivity : AppCompatActivity() {
     private var partnerUserId: String = ""
     private var partnerUser: com.selimqueengh.sohbet.models.User? = null
     private var isPartnerTyping: Boolean = false
+    
+    companion object {
+        private const val PICK_IMAGE_REQUEST = 1
+        private const val PICK_VIDEO_REQUEST = 2
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -155,7 +162,7 @@ class ChatActivity : AppCompatActivity() {
             val statusView = findViewById<TextView>(R.id.chatStatusText)
             if (isPartnerTyping) {
                 // Show typing indicator
-                statusView?.text = "🟡 Yazıyor..."
+                statusView?.text = "Yazıyor..."
                 statusView?.visibility = android.view.View.VISIBLE
             } else {
                 // Hide typing indicator and show normal status
@@ -167,29 +174,29 @@ class ChatActivity : AppCompatActivity() {
     private fun updateChatTitle() {
         partnerUser?.let { user ->
             val statusText = if (user.isOnline) {
-                "🟢 Çevrimiçi"
+                "Çevrimiçi"
             } else {
                 // Son görülme zamanını hesapla
                 when (val lastSeen = user.lastSeen) {
                     is com.google.firebase.Timestamp -> {
                         val timeDiff = System.currentTimeMillis() - lastSeen.toDate().time
                         when {
-                            timeDiff < 60000 -> "🟡 Az önce" // 1 dakika
-                            timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce" // 1 saat
-                            timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce" // 1 gün
-                            else -> "⚫ ${timeDiff / 86400000} gün önce"
+                            timeDiff < 60000 -> "Az önce" // 1 dakika
+                            timeDiff < 3600000 -> "${timeDiff / 60000} dakika önce" // 1 saat
+                            timeDiff < 86400000 -> "${timeDiff / 3600000} saat önce" // 1 gün
+                            else -> "${timeDiff / 86400000} gün önce"
                         }
                     }
                     is Long -> {
                         val timeDiff = System.currentTimeMillis() - lastSeen
                         when {
-                            timeDiff < 60000 -> "🟡 Az önce"
-                            timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce"
-                            timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce"
-                            else -> "⚫ ${timeDiff / 86400000} gün önce"
+                            timeDiff < 60000 -> "Az önce"
+                            timeDiff < 3600000 -> "${timeDiff / 60000} dakika önce"
+                            timeDiff < 86400000 -> "${timeDiff / 3600000} saat önce"
+                            else -> "${timeDiff / 86400000} gün önce"
                         }
                     }
-                    else -> "⚫ Çevrimdışı"
+                    else -> "Çevrimdışı"
                 }
             }
             
@@ -370,9 +377,12 @@ class ChatActivity : AppCompatActivity() {
         if (chatId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
-                    val result = firebaseService.sendMediaMessage(chatId, currentUserId, currentUsername, caption, mediaUrl, mediaType)
+                    // Firebase Auth'dan gerçek user ID'yi al
+                    val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                    
+                    val result = firebaseService.sendMediaMessage(chatId, realCurrentUserId, currentUsername, caption, mediaUrl, mediaType)
                     if (result.isSuccess) {
-                        // Media message sent successfully
+                        Toast.makeText(this@ChatActivity, "Medya gönderildi", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(this@ChatActivity, "Medya gönderilemedi", Toast.LENGTH_SHORT).show()
                     }
@@ -432,14 +442,41 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun selectImage() {
-        // For now, we'll simulate image selection
-        // In a real app, you would use Intent to pick from gallery
-        val imageUrl = "https://example.com/sample-image.jpg"
-        sendMediaMessage(imageUrl, "image/jpeg", "Resim")
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
     }
 
     private fun selectVideo() {
-        // For now, we'll simulate video selection
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "video/*"
+        startActivityForResult(intent, PICK_VIDEO_REQUEST)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (resultCode == RESULT_OK && data != null) {
+            val selectedUri: Uri? = data.data
+            
+            when (requestCode) {
+                PICK_IMAGE_REQUEST -> {
+                    selectedUri?.let { uri ->
+                        // For now, we'll use the URI directly
+                        // In a real app, you would upload to Firebase Storage
+                        sendMediaMessage(uri.toString(), "image/jpeg", "Resim")
+                    }
+                }
+                PICK_VIDEO_REQUEST -> {
+                    selectedUri?.let { uri ->
+                        // For now, we'll use the URI directly
+                        // In a real app, you would upload to Firebase Storage
+                        sendMediaMessage(uri.toString(), "video/mp4", "Video")
+                    }
+                }
+            }
+        }
+    }
         // In a real app, you would use Intent to pick from gallery
         val videoUrl = "https://example.com/sample-video.mp4"
         sendMediaMessage(videoUrl, "video/mp4", "Video")

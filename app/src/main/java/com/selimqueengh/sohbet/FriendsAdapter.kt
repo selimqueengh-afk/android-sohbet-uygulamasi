@@ -32,29 +32,29 @@ class FriendsAdapter(
         
         // Online/offline durumunu göster
         val statusText = if (friend.isOnline) {
-            "🟢 Çevrimiçi"
+            "Çevrimiçi"
         } else {
             // Son görülme zamanını hesapla
             when (val lastSeen = friend.lastSeen) {
                 is com.google.firebase.Timestamp -> {
                     val timeDiff = System.currentTimeMillis() - lastSeen.toDate().time
                     when {
-                        timeDiff < 60000 -> "🟡 Az önce" // 1 dakika
-                        timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce" // 1 saat
-                        timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce" // 1 gün
-                        else -> "⚫ ${timeDiff / 86400000} gün önce"
+                        timeDiff < 60000 -> "Az önce" // 1 dakika
+                        timeDiff < 3600000 -> "${timeDiff / 60000} dakika önce" // 1 saat
+                        timeDiff < 86400000 -> "${timeDiff / 3600000} saat önce" // 1 gün
+                        else -> "${timeDiff / 86400000} gün önce"
                     }
                 }
                 is Long -> {
                     val timeDiff = System.currentTimeMillis() - lastSeen
                     when {
-                        timeDiff < 60000 -> "🟡 Az önce"
-                        timeDiff < 3600000 -> "🟡 ${timeDiff / 60000} dakika önce"
-                        timeDiff < 86400000 -> "🟡 ${timeDiff / 3600000} saat önce"
-                        else -> "⚫ ${timeDiff / 86400000} gün önce"
+                        timeDiff < 60000 -> "Az önce"
+                        timeDiff < 3600000 -> "${timeDiff / 60000} dakika önce"
+                        timeDiff < 86400000 -> "${timeDiff / 3600000} saat önce"
+                        else -> "${timeDiff / 86400000} gün önce"
                     }
                 }
-                else -> "⚫ Çevrimdışı"
+                else -> "Çevrimdışı"
             }
         }
         
