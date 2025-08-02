@@ -625,13 +625,18 @@ class FirebaseService {
         }
     }
 
-    suspend fun sendMediaMessage(chatId: String, senderId: String, senderUsername: String, content: String, mediaUrl: String, mediaType: String): Result<Unit> {
+    suspend fun sendMediaMessage(chatId: String, senderId: String, senderUsername: String, mediaUrl: String, mediaType: String): Result<Unit> {
         return try {
             val messageData = hashMapOf(
                 "chatId" to chatId,
                 "senderId" to senderId,
                 "senderUsername" to senderUsername,
-                "content" to content,
+                "content" to when {
+                    mediaType.startsWith("image/") -> "📷 Resim"
+                    mediaType.startsWith("video/") -> "🎥 Video"
+                    mediaType.startsWith("audio/") -> "🎵 Ses"
+                    else -> "📎 Dosya"
+                },
                 "messageType" to when {
                     mediaType.startsWith("image/") -> "image"
                     mediaType.startsWith("video/") -> "video"
@@ -650,7 +655,12 @@ class FirebaseService {
                 .await()
             
             // Chat'in son mesajını güncelle
-            updateChatLastMessage(chatId, content)
+            updateChatLastMessage(chatId, when {
+                mediaType.startsWith("image/") -> "📷 Resim"
+                mediaType.startsWith("video/") -> "🎥 Video"
+                mediaType.startsWith("audio/") -> "🎵 Ses"
+                else -> "📎 Dosya"
+            })
             
             Result.success(Unit)
         } catch (e: Exception) {

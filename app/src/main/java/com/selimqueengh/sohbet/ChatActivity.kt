@@ -203,6 +203,7 @@ class ChatActivity : AppCompatActivity() {
             runOnUiThread {
                 chatTitleText.text = user.displayName
                 findViewById<TextView>(R.id.chatStatusText)?.text = statusText
+                findViewById<TextView>(R.id.chatStatusText)?.visibility = android.view.View.VISIBLE
             }
         }
     }
@@ -380,7 +381,7 @@ class ChatActivity : AppCompatActivity() {
                     // Firebase Auth'dan gerçek user ID'yi al
                     val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
                     
-                    val result = firebaseService.sendMediaMessage(chatId, realCurrentUserId, currentUsername, caption, mediaUrl, mediaType)
+                    val result = firebaseService.sendMediaMessage(chatId, realCurrentUserId, currentUsername, mediaUrl, mediaType)
                     if (result.isSuccess) {
                         Toast.makeText(this@ChatActivity, "Medya gönderildi", Toast.LENGTH_SHORT).show()
                     } else {
@@ -462,16 +463,14 @@ class ChatActivity : AppCompatActivity() {
             when (requestCode) {
                 PICK_IMAGE_REQUEST -> {
                     selectedUri?.let { uri ->
-                        // For now, we'll use the URI directly
-                        // In a real app, you would upload to Firebase Storage
-                        sendMediaMessage(uri.toString(), "image/jpeg", "Resim")
+                        // Firestore'a medya URL'ini kaydet
+                        sendMediaMessage(uri.toString(), "image/jpeg")
                     }
                 }
                 PICK_VIDEO_REQUEST -> {
                     selectedUri?.let { uri ->
-                        // For now, we'll use the URI directly
-                        // In a real app, you would upload to Firebase Storage
-                        sendMediaMessage(uri.toString(), "video/mp4", "Video")
+                        // Firestore'a medya URL'ini kaydet
+                        sendMediaMessage(uri.toString(), "video/mp4")
                     }
                 }
             }
