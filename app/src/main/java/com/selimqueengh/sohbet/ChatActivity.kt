@@ -19,6 +19,7 @@ import com.selimqueengh.sohbet.models.Message
 import com.selimqueengh.sohbet.models.ChatMessage
 import com.selimqueengh.sohbet.services.FirebaseService
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 class ChatActivity : AppCompatActivity() {
     
@@ -282,7 +283,7 @@ class ChatActivity : AppCompatActivity() {
                                 isSentByUser = isSentByCurrentUser,
                                 timestamp = chatMessage.timestamp,
                                 messageType = chatMessage.messageType,
-                                mediaUrl = chatMessage.mediaUrl,
+                                mediaData = chatMessage.mediaData,
                                 mediaType = chatMessage.mediaType
                             )
                             messageList.add(message)
@@ -326,7 +327,7 @@ class ChatActivity : AppCompatActivity() {
                     isSentByUser = isSentByCurrentUser,
                     timestamp = chatMessage.timestamp,
                     messageType = chatMessage.messageType,
-                    mediaUrl = chatMessage.mediaUrl,
+                    mediaData = chatMessage.mediaData,
                     mediaType = chatMessage.mediaType
                 )
                 

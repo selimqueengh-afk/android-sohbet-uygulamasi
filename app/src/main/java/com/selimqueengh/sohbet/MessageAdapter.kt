@@ -64,7 +64,7 @@ class MessageAdapter(private val messages: List<Message>) :
                 "video" -> {
                     messageText.visibility = View.VISIBLE
                     messageImage?.visibility = View.GONE
-                    messageText.text = "🎥 Video: ${message.content}"
+                    messageText.text = "🎥 Video: ${message.text}"
                 }
                 else -> {
                     messageText.visibility = View.VISIBLE
