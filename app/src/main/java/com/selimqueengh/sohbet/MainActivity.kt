@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity() {
         if (realCurrentUserId.isNotEmpty()) {
             lifecycleScope.launch {
                 firebaseService.setUserOnline(realCurrentUserId)
+                Log.d("MainActivity", "User set to ONLINE: $realCurrentUserId")
             }
         }
     }
@@ -114,6 +115,7 @@ class MainActivity : AppCompatActivity() {
         if (realCurrentUserId.isNotEmpty()) {
             lifecycleScope.launch {
                 firebaseService.setUserOffline(realCurrentUserId)
+                Log.d("MainActivity", "User set to OFFLINE: $realCurrentUserId")
             }
         }
     }

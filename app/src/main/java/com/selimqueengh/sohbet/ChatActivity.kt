@@ -145,7 +145,9 @@ class ChatActivity : AppCompatActivity() {
     
     private fun setupPartnerStatusListener() {
         if (partnerUserId.isNotEmpty()) {
+            Log.d("ChatActivity", "Setting up partner status listener for: $partnerUserId")
             firebaseService.listenToUserStatus(partnerUserId) { user ->
+                Log.d("ChatActivity", "Partner status changed: ${user.displayName} - Online: ${user.isOnline}")
                 partnerUser = user
                 updateChatTitle()
             }
