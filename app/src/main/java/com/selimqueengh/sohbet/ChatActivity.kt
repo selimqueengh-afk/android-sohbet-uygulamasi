@@ -203,8 +203,12 @@ class ChatActivity : AppCompatActivity() {
             
             runOnUiThread {
                 chatTitleText.text = user.displayName
-                findViewById<TextView>(R.id.chatStatusText)?.text = statusText
-                findViewById<TextView>(R.id.chatStatusText)?.visibility = android.view.View.VISIBLE
+                val statusTextView = findViewById<TextView>(R.id.chatStatusText)
+                statusTextView?.text = statusText
+                statusTextView?.visibility = android.view.View.VISIBLE
+                
+                // Debug için log ekle
+                Log.d("ChatActivity", "Status updated: ${user.displayName} - $statusText (Online: ${user.isOnline})")
             }
         }
     }
@@ -333,14 +337,17 @@ class ChatActivity : AppCompatActivity() {
                 
                 // Add message to list and update UI
                 runOnUiThread {
-                    // Check if message already exists to avoid duplicates
-                    val existingMessage = messageList.find { 
-                        it.text == message.text && it.timestamp == message.timestamp 
-                    }
-                    if (existingMessage == null) {
-                        messageList.add(message)
-                        messageAdapter.notifyItemInserted(messageList.size - 1)
-                        recyclerView.scrollToPosition(messageList.size - 1)
+                    // Kendi gönderdiğimiz mesajları real-time listener'dan ekleme
+                    if (!isSentByCurrentUser) {
+                        // Check if message already exists to avoid duplicates
+                        val existingMessage = messageList.find { 
+                            it.text == message.text && it.timestamp == message.timestamp 
+                        }
+                        if (existingMessage == null) {
+                            messageList.add(message)
+                            messageAdapter.notifyItemInserted(messageList.size - 1)
+                            recyclerView.scrollToPosition(messageList.size - 1)
+                        }
                     }
                 }
             }
@@ -351,22 +358,41 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
+                // Hemen UI'da göster (optimistic update)
+                val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                val optimisticMessage = Message(
+                    text = messageText,
+                    sender = "Ben",
+                    isSentByUser = true,
+                    timestamp = System.currentTimeMillis(),
+                    messageType = "text"
+                )
+                
+                messageList.add(optimisticMessage)
+                messageAdapter.notifyItemInserted(messageList.size - 1)
+                recyclerView.scrollToPosition(messageList.size - 1)
+                
+                // Input'u temizle
+                messageEditText.text.clear()
+                
+                // Firebase'e gönder
                 lifecycleScope.launch {
                     try {
-                        // Firebase Auth'dan gerçek user ID'yi al
-                        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
-                        
-                        // Firestore'a mesaj gönder (kalıcı kayıt için)
                         val result = firebaseService.sendMessage(chatId, realCurrentUserId, currentUsername, messageText)
-                        if (result.isSuccess) {
-                            messageEditText.text.clear()
-                            // UI'da hemen gösterme - real-time listener'dan gelecek
-                            // Bu şekilde duplicate olmayacak
-                        } else {
-                            Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
+                        if (!result.isSuccess) {
+                            // Hata durumunda UI'dan kaldır
+                            runOnUiThread {
+                                messageList.removeAt(messageList.size - 1)
+                                messageAdapter.notifyItemRemoved(messageList.size)
+                                Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                        runOnUiThread {
+                            messageList.removeAt(messageList.size - 1)
+                            messageAdapter.notifyItemRemoved(messageList.size)
+                            Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             } else {

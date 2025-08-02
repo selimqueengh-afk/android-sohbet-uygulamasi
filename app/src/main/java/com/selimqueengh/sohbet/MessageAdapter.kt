@@ -48,23 +48,35 @@ class MessageAdapter(private val messages: List<Message>) :
         fun bind(message: Message) {
             when (message.messageType) {
                 "image" -> {
-                    messageText.visibility = View.GONE
-                    messageImage?.visibility = View.VISIBLE
-                    
-                    try {
-                        val imageBytes = android.util.Base64.decode(message.mediaData, android.util.Base64.DEFAULT)
-                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                        messageImage?.setImageBitmap(bitmap)
-                    } catch (e: Exception) {
+                    if (message.mediaData.isNotEmpty()) {
+                        messageText.visibility = View.GONE
+                        messageImage?.visibility = View.VISIBLE
+                        
+                        try {
+                            val imageBytes = android.util.Base64.decode(message.mediaData, android.util.Base64.DEFAULT)
+                            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                            if (bitmap != null) {
+                                messageImage?.setImageBitmap(bitmap)
+                            } else {
+                                messageText.visibility = View.VISIBLE
+                                messageImage?.visibility = View.GONE
+                                messageText.text = "📷 Resim yüklenemedi"
+                            }
+                        } catch (e: Exception) {
+                            messageText.visibility = View.VISIBLE
+                            messageImage?.visibility = View.GONE
+                            messageText.text = "📷 Resim yüklenemedi: ${e.message}"
+                        }
+                    } else {
                         messageText.visibility = View.VISIBLE
                         messageImage?.visibility = View.GONE
-                        messageText.text = "📷 Resim yüklenemedi"
+                        messageText.text = "📷 Resim"
                     }
                 }
                 "video" -> {
                     messageText.visibility = View.VISIBLE
                     messageImage?.visibility = View.GONE
-                    messageText.text = "🎥 Video: ${message.text}"
+                    messageText.text = "🎥 Video"
                 }
                 else -> {
                     messageText.visibility = View.VISIBLE
