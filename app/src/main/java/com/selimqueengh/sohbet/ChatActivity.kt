@@ -477,10 +477,6 @@ class ChatActivity : AppCompatActivity() {
             }
         }
     }
-        // In a real app, you would use Intent to pick from gallery
-        val videoUrl = "https://example.com/sample-video.mp4"
-        sendMediaMessage(videoUrl, "video/mp4", "Video")
-    }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
