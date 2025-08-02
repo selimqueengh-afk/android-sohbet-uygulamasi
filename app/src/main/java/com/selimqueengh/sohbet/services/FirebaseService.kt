@@ -2,16 +2,11 @@ package com.selimqueengh.sohbet.services
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.google.firebase.Timestamp
-import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
-
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.selimqueengh.sohbet.models.User
 import com.selimqueengh.sohbet.models.UserStatus
 import com.selimqueengh.sohbet.models.ChatMessage
@@ -22,299 +17,137 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 class FirebaseService {
+    
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+    private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance()
+    private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
+    
     companion object {
         private const val TAG = "FirebaseService"
         private const val USERS_COLLECTION = "users"
         private const val MESSAGES_COLLECTION = "messages"
         private const val CHATS_COLLECTION = "chats"
-        private const val FRIEND_REQUESTS_COLLECTION = "friend_requests"
+        private const val FRIEND_REQUESTS_COLLECTION = "friendRequests"
+        
+        // Remote Config keys
+        private const val REMOTE_CONFIG_APP_VERSION = "app_version"
+        private const val REMOTE_CONFIG_FORCE_UPDATE = "force_update"
+        private const val REMOTE_CONFIG_UPDATE_URL = "update_url"
+        private const val REMOTE_CONFIG_MAINTENANCE_MODE = "maintenance_mode"
     }
-
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-    private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
-    private val messaging: FirebaseMessaging = FirebaseMessaging.getInstance()
+    
+    init {
+        setupRemoteConfig()
+    }
+    
+    private fun setupRemoteConfig() {
+        val configSettings = FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(3600) // 1 saat
+            .build()
+        remoteConfig.setConfigSettingsAsync(configSettings)
+        
+        // Default values
+        remoteConfig.setDefaultsAsync(mapOf(
+            REMOTE_CONFIG_APP_VERSION to "1.0.0",
+            REMOTE_CONFIG_FORCE_UPDATE to false,
+            REMOTE_CONFIG_UPDATE_URL to "https://play.google.com/store/apps/details?id=com.selimqueengh.sohbet",
+            REMOTE_CONFIG_MAINTENANCE_MODE to false
+        ))
+        
+        // Fetch and activate
+        remoteConfig.fetchAndActivate().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d(TAG, "Remote config updated successfully")
+                checkForUpdates()
+            } else {
+                Log.e(TAG, "Remote config update failed", task.exception)
+            }
+        }
+    }
+    
+    fun checkForUpdates(onUpdateAvailable: (Boolean, String, Boolean) -> Unit) {
+        val currentVersion = "1.0.0" // BuildConfig.VERSION_NAME
+        val remoteVersion = remoteConfig.getString(REMOTE_CONFIG_APP_VERSION)
+        val forceUpdate = remoteConfig.getBoolean(REMOTE_CONFIG_FORCE_UPDATE)
+        val updateUrl = remoteConfig.getString(REMOTE_CONFIG_UPDATE_URL)
+        val maintenanceMode = remoteConfig.getBoolean(REMOTE_CONFIG_MAINTENANCE_MODE)
+        
+        Log.d(TAG, "Current version: $currentVersion, Remote version: $remoteVersion")
+        
+        if (maintenanceMode) {
+            onUpdateAvailable(true, updateUrl, true)
+            return
+        }
+        
+        if (currentVersion != remoteVersion) {
+            onUpdateAvailable(true, updateUrl, forceUpdate)
+        } else {
+            onUpdateAvailable(false, "", false)
+        }
+    }
+    
+    fun getMaintenanceMode(): Boolean {
+        return remoteConfig.getBoolean(REMOTE_CONFIG_MAINTENANCE_MODE)
+    }
+    
+    fun getUpdateUrl(): String {
+        return remoteConfig.getString(REMOTE_CONFIG_UPDATE_URL)
+    }
 
     // ===== AUTHENTICATION =====
     
-    suspend fun signInAnonymously(): Result<FirebaseUser> {
+    fun getCurrentUser() = auth.currentUser
+    
+    suspend fun signIn(email: String, password: String): Result<Unit> {
         return try {
-            val result = auth.signInAnonymously().await()
-            Result.success(result.user!!)
+            auth.signInWithEmailAndPassword(email, password).await()
+            Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error signing in anonymously", e)
+            Log.e(TAG, "Error signing in", e)
             Result.failure(e)
         }
     }
-
-    suspend fun registerWithEmailPassword(email: String, password: String): Result<FirebaseUser> {
+    
+    suspend fun signUp(email: String, password: String, username: String, displayName: String): Result<Unit> {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
-            Result.success(result.user!!)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error registering with email/password", e)
-            Result.failure(e)
-        }
-    }
-
-    suspend fun signInWithEmailPassword(email: String, password: String): Result<FirebaseUser> {
-        return try {
-            val result = auth.signInWithEmailAndPassword(email, password).await()
-            Result.success(result.user!!)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error signing in with email/password", e)
-            Result.failure(e)
-        }
-    }
-
-    fun getCurrentUser(): FirebaseUser? {
-        return auth.currentUser
-    }
-
-    fun signOut() {
-        // Çıkış yapmadan önce offline durumuna geç
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            // Suspend function'ı coroutine scope'da çağır
-            CoroutineScope(Dispatchers.IO).launch {
-                setUserOffline(currentUser.uid)
+            val user = result.user
+            if (user != null) {
+                val userData = hashMapOf(
+                    "username" to username,
+                    "displayName" to displayName,
+                    "email" to email,
+                    "createdAt" to Date(),
+                    "status" to UserStatus.ONLINE.name,
+                    "isOnline" to true,
+                    "lastSeen" to Date(),
+                    "friends" to emptyList<String>(),
+                    "friendRequests" to emptyList<String>()
+                )
+                
+                firestore.collection(USERS_COLLECTION)
+                    .document(user.uid)
+                    .set(userData)
+                    .await()
+                
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("User creation failed"))
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error signing up", e)
+            Result.failure(e)
         }
+    }
+    
+    fun signOut() {
         auth.signOut()
     }
 
-    // ===== KULLANICI YÖNETİMİ =====
+    // ===== USER MANAGEMENT =====
     
-    suspend fun createUser(userId: String, username: String, displayName: String): Result<Unit> {
-        return try {
-            // Kullanıcı adının benzersiz olup olmadığını kontrol et
-            val existingUser = firestore.collection(USERS_COLLECTION)
-                .whereEqualTo("username", username)
-                .get()
-                .await()
-            
-            if (!existingUser.isEmpty) {
-                return Result.failure(Exception("Bu kullanıcı adı zaten kullanılıyor"))
-            }
-            
-            val userData = hashMapOf(
-                "id" to userId,
-                "username" to username,
-                "displayName" to displayName,
-                "avatarUrl" to "",
-                "status" to "ONLINE",
-                "lastSeen" to Timestamp.now(),
-                "isOnline" to true,
-                "friends" to listOf<String>(),
-                "createdAt" to Timestamp.now()
-            )
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .set(userData)
-                .await()
-            
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error creating user", e)
-            Result.failure(e)
-        }
-    }
-
-    // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
-    
-    suspend fun setUserOnline(userId: String) {
-        try {
-            val userData = hashMapOf<String, Any>(
-                "status" to "ONLINE",
-                "isOnline" to true,
-                "lastSeen" to Timestamp.now()
-            )
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(userData)
-                .await()
-            
-            Log.d(TAG, "User $userId set to ONLINE")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting user online", e)
-        }
-    }
-    
-    suspend fun setUserOffline(userId: String) {
-        try {
-            val userData = hashMapOf<String, Any>(
-                "status" to "OFFLINE",
-                "isOnline" to false,
-                "lastSeen" to Timestamp.now()
-            )
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(userData)
-                .await()
-            
-            Log.d(TAG, "User $userId set to OFFLINE")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting user offline", e)
-        }
-    }
-    
-    suspend fun updateLastSeen(userId: String) {
-        try {
-            val userData = hashMapOf<String, Any>(
-                "lastSeen" to Timestamp.now()
-            )
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(userData)
-                .await()
-            
-            Log.d(TAG, "Updated last seen for user $userId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating last seen", e)
-        }
-    }
-    
-    suspend fun getUserStatus(userId: String): Result<User> {
-        return try {
-            val document = firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .get()
-                .await()
-            
-            if (document.exists()) {
-                val data = document.data
-                if (data != null) {
-                    val user = User(
-                        id = document.id,
-                        username = data["username"] as? String ?: "",
-                        displayName = data["displayName"] as? String ?: "",
-                        avatarUrl = data["avatarUrl"] as? String,
-                        status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
-                        lastSeen = data["lastSeen"],
-                        isOnline = data["isOnline"] as? Boolean ?: false,
-                        isTyping = data["isTyping"] as? Boolean ?: false,
-                        typingTo = data["typingTo"] as? String
-                    )
-                    Result.success(user)
-                } else {
-                    Result.failure(Exception("User data is null"))
-                }
-            } else {
-                Result.failure(Exception("User not found"))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting user status", e)
-            Result.failure(e)
-        }
-    }
-    
-    fun listenToUserStatus(userId: String, onStatusChange: (User) -> Unit) {
-        firestore.collection(USERS_COLLECTION)
-            .document(userId)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    Log.e(TAG, "Error listening to user status", e)
-                    return@addSnapshotListener
-                }
-                
-                snapshot?.toObject(User::class.java)?.let { user ->
-                    onStatusChange(user.copy(id = snapshot.id))
-                }
-            }
-    }
-    
-    // ===== TYPING INDICATOR =====
-    
-    suspend fun setUserTyping(userId: String, isTyping: Boolean, typingTo: String? = null) {
-        try {
-            val userData = hashMapOf<String, Any>(
-                "isTyping" to isTyping,
-                "typingTo" to (typingTo ?: "")
-            )
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(userData)
-                .await()
-            
-            Log.d(TAG, "User $userId typing status: $isTyping")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting user typing status", e)
-        }
-    }
-    
-    fun listenToUserTyping(userId: String, onTypingChange: (Boolean, String?) -> Unit) {
-        firestore.collection(USERS_COLLECTION)
-            .document(userId)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    Log.e(TAG, "Error listening to user typing", e)
-                    return@addSnapshotListener
-                }
-                
-                snapshot?.data?.let { data ->
-                    val isTyping = data["isTyping"] as? Boolean ?: false
-                    val typingTo = data["typingTo"] as? String
-                    onTypingChange(isTyping, typingTo)
-                }
-            }
-    }
-
-    suspend fun updateUserStatus(userId: String, isOnline: Boolean, status: String) {
-        try {
-            val updates = hashMapOf<String, Any>(
-                "isOnline" to isOnline,
-                "status" to status,
-                "lastSeen" to Timestamp.now()
-            )
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update(updates)
-                .await()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating user status", e)
-        }
-    }
-
-    suspend fun getUsers(): Result<List<User>> {
-        return try {
-            val snapshot = firestore.collection(USERS_COLLECTION)
-                .get()
-                .await()
-            
-            val users = snapshot.documents.mapNotNull { doc ->
-                try {
-                    doc.toObject(User::class.java)?.copy(id = doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deserializing user: ${doc.id}", e)
-                    // Fallback: create user manually from document data
-                    val data = doc.data
-                    if (data != null) {
-                        User(
-                            id = doc.id,
-                            username = data["username"] as? String ?: "",
-                            displayName = data["displayName"] as? String ?: "",
-                            avatarUrl = data["avatarUrl"] as? String,
-                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
-                            lastSeen = data["lastSeen"],
-                            isOnline = data["isOnline"] as? Boolean ?: false,
-                            isTyping = data["isTyping"] as? Boolean ?: false,
-                            typingTo = data["typingTo"] as? String
-                        )
-                    } else null
-                }
-            }
-            Result.success(users)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting users", e)
-            Result.failure(e)
-        }
-    }
-
     suspend fun searchUserByUsername(username: String): Result<User?> {
         return try {
             val snapshot = firestore.collection(USERS_COLLECTION)
@@ -322,159 +155,125 @@ class FirebaseService {
                 .get()
                 .await()
             
-            val user = snapshot.documents.firstOrNull()?.let { doc ->
-                try {
-                    doc.toObject(User::class.java)?.copy(id = doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error deserializing user: ${doc.id}", e)
-                    // Fallback: create user manually from document data
-                    val data = doc.data
-                    if (data != null) {
-                        User(
-                            id = doc.id,
-                            username = data["username"] as? String ?: "",
-                            displayName = data["displayName"] as? String ?: "",
-                            avatarUrl = data["avatarUrl"] as? String,
-                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
-                            lastSeen = data["lastSeen"],
-                            isOnline = data["isOnline"] as? Boolean ?: false,
-                            isTyping = data["isTyping"] as? Boolean ?: false,
-                            typingTo = data["typingTo"] as? String
-                        )
-                    } else null
-                }
+            if (!snapshot.isEmpty) {
+                val document = snapshot.documents[0]
+                val user = User(
+                    id = document.id,
+                    username = document.getString("username") ?: "",
+                    displayName = document.getString("displayName") ?: "",
+                    avatarUrl = document.getString("avatarUrl"),
+                    status = UserStatus.valueOf(document.getString("status") ?: "OFFLINE"),
+                    lastSeen = document.get("lastSeen"),
+                    isOnline = document.getBoolean("isOnline") ?: false,
+                    isTyping = document.getBoolean("isTyping") ?: false,
+                    typingTo = document.getString("typingTo")
+                )
+                Result.success(user)
+            } else {
+                Result.success(null)
             }
-            Result.success(user)
         } catch (e: Exception) {
-            Log.e(TAG, "Error searching user by username", e)
+            Log.e(TAG, "Error searching user", e)
             Result.failure(e)
         }
     }
-
-    suspend fun getUserById(userId: String): Result<User?> {
-        return try {
-            val doc = firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .get()
-                .await()
-            
-            val user = if (doc.exists()) {
-                doc.toObject(User::class.java)?.copy(id = doc.id)
-            } else null
-            
-            Result.success(user)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting user by ID", e)
-            Result.failure(e)
-        }
-    }
-
-    // ===== ARKADAŞ SİSTEMİ =====
     
-    suspend fun sendFriendRequest(fromUserId: String, toUserId: String): Result<Unit> {
+    suspend fun updateUserProfile(userId: String, displayName: String, avatarUrl: String?): Result<Unit> {
         return try {
-            Log.d(TAG, "Sending friend request from $fromUserId to $toUserId")
-            
-            // Daha önce istek gönderilip gönderilmediğini kontrol et
-            val existingRequest = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .whereEqualTo("fromUserId", fromUserId)
-                .whereEqualTo("toUserId", toUserId)
-                .whereEqualTo("status", "pending")
-                .get()
-                .await()
-            
-            Log.d(TAG, "Existing requests found: ${existingRequest.size()}")
-            
-            if (!existingRequest.isEmpty) {
-                Log.d(TAG, "Request already exists")
-                return Result.failure(Exception("Bu kullanıcıya zaten istek gönderilmiş"))
+            val updates = hashMapOf<String, Any>(
+                "displayName" to displayName
+            )
+            if (avatarUrl != null) {
+                updates["avatarUrl"] = avatarUrl
             }
             
-            val requestData = hashMapOf(
-                "fromUserId" to fromUserId,
-                "toUserId" to toUserId,
-                "status" to "pending",
-                "timestamp" to Timestamp.now()
-            )
-            
-            Log.d(TAG, "Creating request with data: $requestData")
-            
-            val docRef = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .add(requestData)
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(updates)
                 .await()
             
-            Log.d(TAG, "Request created successfully with ID: ${docRef.id}")
             Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating user profile", e)
+            Result.failure(e)
+        }
+    }
+
+    // ===== FRIEND SYSTEM =====
+    
+    suspend fun sendFriendRequest(fromUserId: String, toUsername: String): Result<Unit> {
+        return try {
+            val toUserResult = searchUserByUsername(toUsername)
+            if (toUserResult.isSuccess) {
+                val toUser = toUserResult.getOrNull()
+                if (toUser != null) {
+                    val requestData = hashMapOf(
+                        "fromUserId" to fromUserId,
+                        "toUserId" to toUser.id,
+                        "status" to "PENDING",
+                        "createdAt" to Date()
+                    )
+                    
+                    firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                        .add(requestData)
+                        .await()
+                    
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception("Kullanıcı bulunamadı"))
+                }
+            } else {
+                Result.failure(Exception("Kullanıcı arama hatası"))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending friend request", e)
             Result.failure(e)
         }
     }
-
-    suspend fun getIncomingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
-        return try {
-            val snapshot = firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .whereEqualTo("toUserId", userId)
-                .whereEqualTo("status", "pending")
-                .get()
-                .await()
-            
-            val requests = snapshot.documents.map { doc ->
-                doc.data?.toMutableMap()?.apply {
-                    put("requestId", doc.id)
-                } ?: mutableMapOf()
-            }
-            
-            Result.success(requests)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting incoming friend requests", e)
-            Result.failure(e)
-        }
-    }
-
+    
     suspend fun acceptFriendRequest(requestId: String): Result<Unit> {
         return try {
-            // İsteği kabul et
-            firestore.collection(FRIEND_REQUESTS_COLLECTION)
-                .document(requestId)
-                .update("status", "accepted")
-                .await()
-            
-            // İsteğin detaylarını al
             val requestDoc = firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .document(requestId)
                 .get()
                 .await()
             
-            val fromUserId = requestDoc.getString("fromUserId") ?: ""
-            val toUserId = requestDoc.getString("toUserId") ?: ""
-            
-            // Her iki kullanıcının friends listesine ekle
-            firestore.collection(USERS_COLLECTION)
-                .document(toUserId)
-                .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(fromUserId))
-                .await()
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(fromUserId)
-                .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(toUserId))
-                .await()
-            
-            // Otomatik sohbet oluştur (Realtime Database)
-            createRealtimeChat(fromUserId, toUserId)
-            
-            Result.success(Unit)
+            if (requestDoc.exists()) {
+                val fromUserId = requestDoc.getString("fromUserId") ?: ""
+                val toUserId = requestDoc.getString("toUserId") ?: ""
+                
+                // Update request status
+                firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                    .document(requestId)
+                    .update("status", "ACCEPTED")
+                    .await()
+                
+                // Add to friends list for both users
+                firestore.collection(USERS_COLLECTION)
+                    .document(fromUserId)
+                    .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(toUserId))
+                    .await()
+                
+                firestore.collection(USERS_COLLECTION)
+                    .document(toUserId)
+                    .update("friends", com.google.firebase.firestore.FieldValue.arrayUnion(fromUserId))
+                    .await()
+                
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Friend request not found"))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error accepting friend request", e)
             Result.failure(e)
         }
     }
-
+    
     suspend fun rejectFriendRequest(requestId: String): Result<Unit> {
         return try {
             firestore.collection(FRIEND_REQUESTS_COLLECTION)
                 .document(requestId)
-                .delete()
+                .update("status", "REJECTED")
                 .await()
             
             Result.success(Unit)
@@ -527,11 +326,6 @@ class FirebaseService {
                 .document(friendId)
                 .update("friends", com.google.firebase.firestore.FieldValue.arrayRemove(userId))
                 .await()
-            
-            // Sohbeti de sil (Realtime Database)
-            val chatId = if (userId < friendId) "${userId}_${friendId}" else "${friendId}_${userId}"
-            database.getReference("chats").child(chatId).removeValue()
-            database.getReference("messages").child(chatId).removeValue()
             
             Result.success(Unit)
         } catch (e: Exception) {
@@ -590,30 +384,14 @@ class FirebaseService {
                 "senderUsername" to senderUsername,
                 "content" to content,
                 "messageType" to "text",
-                "mediaUrl" to "",
-                "mediaType" to "",
                 "timestamp" to Date(),
                 "isRead" to false,
                 "isDelivered" to false
             )
             
-            // Hem Firestore'a hem Realtime Database'e kaydet
             firestore.collection(MESSAGES_COLLECTION)
                 .add(messageData)
                 .await()
-            
-            // Realtime Database'e de kaydet
-            val realtimeMessage = hashMapOf(
-                "senderId" to senderId,
-                "senderUsername" to senderUsername,
-                "content" to content,
-                "messageType" to "text",
-                "timestamp" to System.currentTimeMillis(),
-                "isRead" to false,
-                "isDelivered" to false
-            )
-            
-            database.getReference("messages").child(chatId).push().setValue(realtimeMessage)
             
             // Chat'in son mesajını güncelle
             updateChatLastMessage(chatId, content)
@@ -624,21 +402,26 @@ class FirebaseService {
             Result.failure(e)
         }
     }
-
-    suspend fun sendBase64MediaMessage(chatId: String, senderId: String, senderUsername: String, base64Data: String, mediaType: String, caption: String): Result<Unit> {
+    
+    suspend fun sendMediaMessage(chatId: String, senderId: String, senderUsername: String, mediaUrl: String, mediaType: String): Result<Unit> {
         return try {
             val messageData = hashMapOf(
                 "chatId" to chatId,
                 "senderId" to senderId,
                 "senderUsername" to senderUsername,
-                "content" to caption,
+                "content" to when {
+                    mediaType.startsWith("image/") -> "📷 Resim"
+                    mediaType.startsWith("video/") -> "🎥 Video"
+                    mediaType.startsWith("audio/") -> "🎵 Ses"
+                    else -> "📎 Dosya"
+                },
                 "messageType" to when {
                     mediaType.startsWith("image/") -> "image"
                     mediaType.startsWith("video/") -> "video"
                     mediaType.startsWith("audio/") -> "audio"
                     else -> "file"
                 },
-                "mediaData" to base64Data,
+                "mediaUrl" to mediaUrl,
                 "mediaType" to mediaType,
                 "timestamp" to Date(),
                 "isRead" to false,
@@ -650,11 +433,16 @@ class FirebaseService {
                 .await()
             
             // Chat'in son mesajını güncelle
-            updateChatLastMessage(chatId, caption)
+            updateChatLastMessage(chatId, when {
+                mediaType.startsWith("image/") -> "📷 Resim"
+                mediaType.startsWith("video/") -> "🎥 Video"
+                mediaType.startsWith("audio/") -> "🎵 Ses"
+                else -> "📎 Dosya"
+            })
             
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending base64 media message", e)
+            Log.e(TAG, "Error sending media message", e)
             Result.failure(e)
         }
     }
@@ -678,26 +466,15 @@ class FirebaseService {
 
     suspend fun getMessages(chatId: String, limit: Long = 50): Result<List<ChatMessage>> {
         return try {
-            // Check authentication first
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                Log.e(TAG, "User not authenticated")
-                return Result.failure(Exception("Kullanıcı girişi yapılmamış"))
-            }
-            
-            Log.d(TAG, "Getting messages for chatId: $chatId, user: ${currentUser.uid}")
-            
-            // Önce index olmadan deneyelim, sonra orderBy ekleyelim
             val snapshot = try {
                 firestore.collection(MESSAGES_COLLECTION)
                     .whereEqualTo("chatId", chatId)
-                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
                     .limit(limit)
                     .get()
                     .await()
             } catch (e: Exception) {
                 Log.w(TAG, "Failed with orderBy, trying without: ${e.message}")
-                // Index yoksa orderBy olmadan dene
                 firestore.collection(MESSAGES_COLLECTION)
                     .whereEqualTo("chatId", chatId)
                     .limit(limit)
@@ -705,12 +482,9 @@ class FirebaseService {
                     .await()
             }
             
-            Log.d(TAG, "Found ${snapshot.documents.size} messages in Firestore")
-            
             val messages = snapshot.documents.mapNotNull { doc ->
                 val data = doc.data
                 if (data != null) {
-                    // Timestamp'i farklı formatlardan oku
                     val timestamp = when (val ts = data["timestamp"]) {
                         is Date -> ts.time
                         is com.google.firebase.Timestamp -> ts.toDate().time
@@ -732,9 +506,8 @@ class FirebaseService {
                         isDelivered = data["isDelivered"] as? Boolean ?: false
                     )
                 } else null
-            }.sortedBy { it.timestamp }.reversed() // Memory'de sırala
+            }.sortedBy { it.timestamp }.reversed()
             
-            Log.d(TAG, "Processed ${messages.size} messages")
             Result.success(messages)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting messages", e)
@@ -742,28 +515,7 @@ class FirebaseService {
         }
     }
 
-    // ===== FCM TOKEN YÖNETİMİ =====
-    
-    suspend fun updateFCMToken(userId: String): Result<String> {
-        return try {
-            val token = messaging.token.await()
-            
-            firestore.collection(USERS_COLLECTION)
-                .document(userId)
-                .update("fcmToken", token)
-                .await()
-            
-            Result.success(token)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating FCM token", e)
-            Result.failure(e)
-        }
-    }
-
-    // ===== REAL-TIME DİNLEME =====
-    
     fun listenToMessages(chatId: String, onMessage: (ChatMessage) -> Unit) {
-        // Index sorunu olmaması için orderBy kullanmıyoruz
         firestore.collection(MESSAGES_COLLECTION)
             .whereEqualTo("chatId", chatId)
             .addSnapshotListener { snapshot, e ->
@@ -777,7 +529,6 @@ class FirebaseService {
                         com.google.firebase.firestore.DocumentChange.Type.ADDED -> {
                             val data = change.document.data
                             if (data != null) {
-                                // Timestamp'i farklı formatlardan oku
                                 val timestamp = when (val ts = data["timestamp"]) {
                                     is Date -> ts.time
                                     is com.google.firebase.Timestamp -> ts.toDate().time
@@ -807,89 +558,177 @@ class FirebaseService {
             }
     }
 
-    // ===== REALTIME DATABASE MESAJLAŞMA =====
+    // ===== FCM TOKEN YÖNETİMİ =====
     
-    fun sendRealtimeMessage(chatId: String, senderId: String, senderUsername: String, content: String, messageType: String = "text") {
-        val messageRef = database.getReference("messages").child(chatId).push()
-        val message = hashMapOf(
-            "senderId" to senderId,
-            "senderUsername" to senderUsername,
-            "content" to content,
-            "messageType" to messageType,
-            "timestamp" to System.currentTimeMillis(),
-            "isRead" to false,
-            "isDelivered" to false
-        )
-        
-        messageRef.setValue(message).addOnSuccessListener {
-            Log.d(TAG, "Message sent successfully to Realtime Database")
-        }.addOnFailureListener { e ->
-            Log.e(TAG, "Error sending message to Realtime Database", e)
+    suspend fun updateFCMToken(userId: String): Result<String> {
+        return try {
+            val token = messaging.token.await()
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update("fcmToken", token)
+                .await()
+            
+            Result.success(token)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating FCM token", e)
+            Result.failure(e)
         }
     }
 
-    fun listenToRealtimeMessages(chatId: String, onMessage: (Map<String, Any>) -> Unit) {
-        val messagesRef = database.getReference("messages").child(chatId)
-        
-        messagesRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                for (messageSnapshot in snapshot.children) {
-                    val message = messageSnapshot.value as? Map<String, Any>
-                    message?.let {
-                        val messageWithId = it.toMutableMap()
-                        messageWithId["id"] = messageSnapshot.key ?: ""
-                        onMessage(messageWithId)
+    // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
+    
+    suspend fun setUserOnline(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "status" to "ONLINE",
+                "isOnline" to true,
+                "lastSeen" to com.google.firebase.Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "User $userId set to ONLINE")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user online", e)
+        }
+    }
+    
+    suspend fun setUserOffline(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "status" to "OFFLINE",
+                "isOnline" to false,
+                "lastSeen" to com.google.firebase.Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "User $userId set to OFFLINE")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user offline", e)
+        }
+    }
+    
+    suspend fun updateLastSeen(userId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "lastSeen" to com.google.firebase.Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+            
+            Log.d(TAG, "Updated last seen for user $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating last seen", e)
+        }
+    }
+    
+    suspend fun getUserStatus(userId: String): Result<User> {
+        return try {
+            val document = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            if (document.exists()) {
+                val data = document.data
+                if (data != null) {
+                    val user = User(
+                        id = document.id,
+                        username = data["username"] as? String ?: "",
+                        displayName = data["displayName"] as? String ?: "",
+                        avatarUrl = data["avatarUrl"] as? String,
+                        status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                        lastSeen = data["lastSeen"],
+                        isOnline = data["isOnline"] as? Boolean ?: false,
+                        isTyping = data["isTyping"] as? Boolean ?: false,
+                        typingTo = data["typingTo"] as? String
+                    )
+                    Result.success(user)
+                } else {
+                    Result.failure(Exception("User data is null"))
+                }
+            } else {
+                Result.failure(Exception("User not found"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user status", e)
+            Result.failure(e)
+        }
+    }
+    
+    fun listenToUserStatus(userId: String, onStatusChange: (User) -> Unit) {
+        firestore.collection(USERS_COLLECTION)
+            .document(userId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error listening to user status", e)
+                    return@addSnapshotListener
+                }
+                
+                if (snapshot != null && snapshot.exists()) {
+                    val data = snapshot.data
+                    if (data != null) {
+                        val user = User(
+                            id = snapshot.id,
+                            username = data["username"] as? String ?: "",
+                            displayName = data["displayName"] as? String ?: "",
+                            avatarUrl = data["avatarUrl"] as? String,
+                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                            lastSeen = data["lastSeen"],
+                            isOnline = data["isOnline"] as? Boolean ?: false,
+                            isTyping = data["isTyping"] as? Boolean ?: false,
+                            typingTo = data["typingTo"] as? String
+                        )
+                        onStatusChange(user)
                     }
                 }
             }
+    }
+    
+    suspend fun setUserTyping(userId: String, isTyping: Boolean, chatId: String) {
+        try {
+            val userData = hashMapOf<String, Any>(
+                "isTyping" to isTyping,
+                "typingTo" to if (isTyping) chatId else ""
+            )
             
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(TAG, "Error listening to Realtime Database messages", error.toException())
-            }
-        })
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .update(userData)
+                .await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting user typing", e)
+        }
     }
-
-    fun createRealtimeChat(user1Id: String, user2Id: String): String {
-        val chatId = if (user1Id < user2Id) "${user1Id}_${user2Id}" else "${user2Id}_${user1Id}"
-        
-        val chatRef = database.getReference("chats").child(chatId)
-        val chatData = hashMapOf(
-            "participants" to listOf(user1Id, user2Id),
-            "lastMessage" to "",
-            "lastMessageTimestamp" to System.currentTimeMillis(),
-            "createdAt" to System.currentTimeMillis()
-        )
-        
-        chatRef.setValue(chatData)
-        return chatId
-    }
-
-    fun getRealtimeChats(userId: String, onChats: (List<Map<String, Any>>) -> Unit) {
-        val chatsRef = database.getReference("chats")
-        
-        chatsRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val chats = mutableListOf<Map<String, Any>>()
-                
-                for (chatSnapshot in snapshot.children) {
-                    val chat = chatSnapshot.value as? Map<String, Any>
-                    chat?.let {
-                        val participants = it["participants"] as? List<String>
-                        if (participants?.contains(userId) == true) {
-                            val chatWithId = it.toMutableMap()
-                            chatWithId["chatId"] = chatSnapshot.key ?: ""
-                            chats.add(chatWithId)
-                        }
-                    }
+    
+    fun listenToUserTyping(userId: String, onTypingChange: (Boolean, String) -> Unit) {
+        firestore.collection(USERS_COLLECTION)
+            .document(userId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.e(TAG, "Error listening to user typing", e)
+                    return@addSnapshotListener
                 }
                 
-                onChats(chats)
+                if (snapshot != null && snapshot.exists()) {
+                    val data = snapshot.data
+                    if (data != null) {
+                        val isTyping = data["isTyping"] as? Boolean ?: false
+                        val typingTo = data["typingTo"] as? String ?: ""
+                        onTypingChange(isTyping, typingTo)
+                    }
+                }
             }
-            
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(TAG, "Error getting Realtime Database chats", error.toException())
-                onChats(emptyList())
-            }
-        })
     }
 }

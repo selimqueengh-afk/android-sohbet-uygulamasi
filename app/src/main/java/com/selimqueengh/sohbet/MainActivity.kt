@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.selimqueengh.sohbet.fragments.ChatsFragment
 import com.selimqueengh.sohbet.services.FirebaseService
@@ -31,6 +32,9 @@ class MainActivity : AppCompatActivity() {
         
         initViews()
         setupClickListeners()
+        
+        // Check for updates first
+        checkForUpdates()
         
         // Default to chats fragment
         showChatsFragment()
@@ -71,6 +75,56 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.contentFrame, fragment)
             .commit()
+    }
+    
+    private fun checkForUpdates() {
+        firebaseService.checkForUpdates { hasUpdate, updateUrl, forceUpdate ->
+            runOnUiThread {
+                if (hasUpdate) {
+                    showUpdateDialog(updateUrl, forceUpdate)
+                }
+            }
+        }
+    }
+    
+    private fun showUpdateDialog(updateUrl: String, forceUpdate: Boolean) {
+        val dialogBuilder = AlertDialog.Builder(this)
+        
+        if (forceUpdate) {
+            dialogBuilder.setTitle("Güncelleme Gerekli")
+                .setMessage("Uygulamanın yeni bir sürümü mevcut. Devam etmek için güncelleme yapmanız gerekiyor.")
+                .setCancelable(false)
+                .setPositiveButton("Güncelle") { _, _ ->
+                    // Open update URL
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(updateUrl))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Güncelleme linki açılamadı", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Çıkış") { _, _ ->
+                    finish()
+                }
+        } else {
+            dialogBuilder.setTitle("Güncelleme Mevcut")
+                .setMessage("Uygulamanın yeni bir sürümü mevcut. Güncellemek ister misiniz?")
+                .setCancelable(true)
+                .setPositiveButton("Güncelle") { _, _ ->
+                    // Open update URL
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(updateUrl))
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Güncelleme linki açılamadı", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Daha Sonra") { dialog, _ ->
+                    dialog.dismiss()
+                }
+        }
+        
+        dialogBuilder.show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
