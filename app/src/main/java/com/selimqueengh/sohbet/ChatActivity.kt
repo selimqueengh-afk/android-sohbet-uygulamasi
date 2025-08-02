@@ -319,9 +319,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun setupRealtimeMessageListener() {
         if (chatId.isNotEmpty()) {
-            // Sadece Firestore'dan mesajları dinle (duplicate olmaması için)
             firebaseService.listenToMessages(chatId) { chatMessage ->
-                // Firebase Auth'dan gerçek user ID'yi al
                 val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
                 val isSentByCurrentUser = chatMessage.senderId == realCurrentUserId
                 
@@ -335,19 +333,15 @@ class ChatActivity : AppCompatActivity() {
                     mediaType = chatMessage.mediaType
                 )
                 
-                // Add message to list and update UI
                 runOnUiThread {
-                    // Kendi gönderdiğimiz mesajları real-time listener'dan ekleme
-                    if (!isSentByCurrentUser) {
-                        // Check if message already exists to avoid duplicates
-                        val existingMessage = messageList.find { 
-                            it.text == message.text && it.timestamp == message.timestamp 
-                        }
-                        if (existingMessage == null) {
-                            messageList.add(message)
-                            messageAdapter.notifyItemInserted(messageList.size - 1)
-                            recyclerView.scrollToPosition(messageList.size - 1)
-                        }
+                    // Check if message already exists to avoid duplicates
+                    val existingMessage = messageList.find { 
+                        it.text == message.text && it.timestamp == message.timestamp 
+                    }
+                    if (existingMessage == null) {
+                        messageList.add(message)
+                        messageAdapter.notifyItemInserted(messageList.size - 1)
+                        recyclerView.scrollToPosition(messageList.size - 1)
                     }
                 }
             }
@@ -358,39 +352,21 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
-                // Hemen UI'da göster (optimistic update)
-                val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
-                val optimisticMessage = Message(
-                    text = messageText,
-                    sender = "Ben",
-                    isSentByUser = true,
-                    timestamp = System.currentTimeMillis(),
-                    messageType = "text"
-                )
-                
-                messageList.add(optimisticMessage)
-                messageAdapter.notifyItemInserted(messageList.size - 1)
-                recyclerView.scrollToPosition(messageList.size - 1)
-                
-                // Input'u temizle
+                // Input'u hemen temizle
                 messageEditText.text.clear()
                 
                 // Firebase'e gönder
                 lifecycleScope.launch {
                     try {
+                        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
                         val result = firebaseService.sendMessage(chatId, realCurrentUserId, currentUsername, messageText)
                         if (!result.isSuccess) {
-                            // Hata durumunda UI'dan kaldır
                             runOnUiThread {
-                                messageList.removeAt(messageList.size - 1)
-                                messageAdapter.notifyItemRemoved(messageList.size)
                                 Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } catch (e: Exception) {
                         runOnUiThread {
-                            messageList.removeAt(messageList.size - 1)
-                            messageAdapter.notifyItemRemoved(messageList.size)
                             Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -491,9 +467,13 @@ class ChatActivity : AppCompatActivity() {
                 val bytes = inputStream?.readBytes()
                 inputStream?.close()
                 
-                if (bytes != null) {
+                if (bytes != null && bytes.size <= 5 * 1024 * 1024) { // 5MB limit
                     val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
                     sendBase64MediaMessage(base64, "image/jpeg", "📷 Resim")
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this@ChatActivity, "Resim çok büyük (max 5MB)", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -510,9 +490,13 @@ class ChatActivity : AppCompatActivity() {
                 val bytes = inputStream?.readBytes()
                 inputStream?.close()
                 
-                if (bytes != null) {
+                if (bytes != null && bytes.size <= 10 * 1024 * 1024) { // 10MB limit
                     val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
                     sendBase64MediaMessage(base64, "video/mp4", "🎥 Video")
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this@ChatActivity, "Video çok büyük (max 10MB)", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } catch (e: Exception) {
                 runOnUiThread {

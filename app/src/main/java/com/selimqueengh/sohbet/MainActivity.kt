@@ -38,6 +38,39 @@ class MainActivity : AppCompatActivity() {
         // Kullanıcıyı online yap
         setUserOnline()
     }
+    
+    override fun onResume() {
+        super.onResume()
+        setUserOnline()
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        setUserOffline()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        setUserOffline()
+    }
+    
+    private fun setUserOnline() {
+        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+        if (realCurrentUserId.isNotEmpty()) {
+            lifecycleScope.launch {
+                firebaseService.setUserOnline(realCurrentUserId)
+            }
+        }
+    }
+    
+    private fun setUserOffline() {
+        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+        if (realCurrentUserId.isNotEmpty()) {
+            lifecycleScope.launch {
+                firebaseService.setUserOffline(realCurrentUserId)
+            }
+        }
+    }
 
     private fun initViews() {
         // Toolbar'ı ayarla
