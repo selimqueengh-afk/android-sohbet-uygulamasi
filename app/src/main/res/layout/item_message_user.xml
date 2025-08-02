@@ -24,6 +24,14 @@
             android:textSize="16sp"
             android:lineSpacingExtra="2dp" />
 
+        <ImageView
+            android:id="@+id/imageViewMessage"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:layout_marginTop="4dp" />
+
         <TextView
             android:id="@+id/textViewTime"
             android:layout_width="wrap_content"

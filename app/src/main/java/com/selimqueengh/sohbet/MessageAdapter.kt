@@ -1,8 +1,10 @@
 package com.selimqueengh.sohbet
 
+import android.graphics.BitmapFactory
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.selimqueengh.sohbet.models.Message
@@ -41,9 +43,35 @@ class MessageAdapter(private val messages: List<Message>) :
     class MessageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageText: TextView = itemView.findViewById(R.id.textViewMessage)
         private val messageTime: TextView = itemView.findViewById(R.id.textViewTime)
+        private val messageImage: ImageView? = itemView.findViewById(R.id.imageViewMessage)
 
         fun bind(message: Message) {
-            messageText.text = message.text
+            when (message.messageType) {
+                "image" -> {
+                    messageText.visibility = View.GONE
+                    messageImage?.visibility = View.VISIBLE
+                    
+                    try {
+                        val imageBytes = android.util.Base64.decode(message.mediaData, android.util.Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        messageImage?.setImageBitmap(bitmap)
+                    } catch (e: Exception) {
+                        messageText.visibility = View.VISIBLE
+                        messageImage?.visibility = View.GONE
+                        messageText.text = "📷 Resim yüklenemedi"
+                    }
+                }
+                "video" -> {
+                    messageText.visibility = View.VISIBLE
+                    messageImage?.visibility = View.GONE
+                    messageText.text = "🎥 Video: ${message.content}"
+                }
+                else -> {
+                    messageText.visibility = View.VISIBLE
+                    messageImage?.visibility = View.GONE
+                    messageText.text = message.text
+                }
+            }
             
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             messageTime.text = timeFormat.format(Date(message.timestamp))

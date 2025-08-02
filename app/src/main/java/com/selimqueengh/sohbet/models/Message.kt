@@ -6,6 +6,6 @@ data class Message(
     val isSentByUser: Boolean,
     val timestamp: Long,
     val messageType: String = "text",
-    val mediaUrl: String = "",
+    val mediaData: String = "",
     val mediaType: String = ""
 )

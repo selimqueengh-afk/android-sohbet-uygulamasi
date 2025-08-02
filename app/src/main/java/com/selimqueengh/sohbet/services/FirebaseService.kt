@@ -625,25 +625,20 @@ class FirebaseService {
         }
     }
 
-    suspend fun sendMediaMessage(chatId: String, senderId: String, senderUsername: String, mediaUrl: String, mediaType: String): Result<Unit> {
+    suspend fun sendBase64MediaMessage(chatId: String, senderId: String, senderUsername: String, base64Data: String, mediaType: String, caption: String): Result<Unit> {
         return try {
             val messageData = hashMapOf(
                 "chatId" to chatId,
                 "senderId" to senderId,
                 "senderUsername" to senderUsername,
-                "content" to when {
-                    mediaType.startsWith("image/") -> "📷 Resim"
-                    mediaType.startsWith("video/") -> "🎥 Video"
-                    mediaType.startsWith("audio/") -> "🎵 Ses"
-                    else -> "📎 Dosya"
-                },
+                "content" to caption,
                 "messageType" to when {
                     mediaType.startsWith("image/") -> "image"
                     mediaType.startsWith("video/") -> "video"
                     mediaType.startsWith("audio/") -> "audio"
                     else -> "file"
                 },
-                "mediaUrl" to mediaUrl,
+                "mediaData" to base64Data,
                 "mediaType" to mediaType,
                 "timestamp" to Date(),
                 "isRead" to false,
@@ -655,16 +650,11 @@ class FirebaseService {
                 .await()
             
             // Chat'in son mesajını güncelle
-            updateChatLastMessage(chatId, when {
-                mediaType.startsWith("image/") -> "📷 Resim"
-                mediaType.startsWith("video/") -> "🎥 Video"
-                mediaType.startsWith("audio/") -> "🎵 Ses"
-                else -> "📎 Dosya"
-            })
+            updateChatLastMessage(chatId, caption)
             
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending media message", e)
+            Log.e(TAG, "Error sending base64 media message", e)
             Result.failure(e)
         }
     }
@@ -735,7 +725,7 @@ class FirebaseService {
                         senderUsername = data["senderUsername"] as? String ?: "",
                         content = data["content"] as? String ?: "",
                         messageType = data["messageType"] as? String ?: "text",
-                        mediaUrl = data["mediaUrl"] as? String ?: "",
+                        mediaData = data["mediaData"] as? String ?: "",
                         mediaType = data["mediaType"] as? String ?: "",
                         timestamp = timestamp,
                         isRead = data["isRead"] as? Boolean ?: false,
@@ -802,7 +792,7 @@ class FirebaseService {
                                     senderUsername = data["senderUsername"] as? String ?: "",
                                     content = data["content"] as? String ?: "",
                                     messageType = data["messageType"] as? String ?: "text",
-                                    mediaUrl = data["mediaUrl"] as? String ?: "",
+                                    mediaData = data["mediaData"] as? String ?: "",
                                     mediaType = data["mediaType"] as? String ?: "",
                                     timestamp = timestamp,
                                     isRead = data["isRead"] as? Boolean ?: false,

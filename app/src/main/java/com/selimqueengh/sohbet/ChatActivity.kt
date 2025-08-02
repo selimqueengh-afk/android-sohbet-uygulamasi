@@ -374,27 +374,7 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun sendMediaMessage(mediaUrl: String, mediaType: String, caption: String = "") {
-        if (chatId.isNotEmpty()) {
-            lifecycleScope.launch {
-                try {
-                    // Firebase Auth'dan gerçek user ID'yi al
-                    val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
-                    
-                    val result = firebaseService.sendMediaMessage(chatId, realCurrentUserId, currentUsername, mediaUrl, mediaType)
-                    if (result.isSuccess) {
-                        Toast.makeText(this@ChatActivity, "Medya gönderildi", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@ChatActivity, "Medya gönderilemedi", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            Toast.makeText(this@ChatActivity, "Sohbet henüz hazır değil", Toast.LENGTH_SHORT).show()
-        }
-    }
+
 
     private fun addSampleMessages() {
         val sampleMessages = listOf(
@@ -463,14 +443,76 @@ class ChatActivity : AppCompatActivity() {
             when (requestCode) {
                 PICK_IMAGE_REQUEST -> {
                     selectedUri?.let { uri ->
-                        // Firestore'a medya URL'ini kaydet
-                        sendMediaMessage(uri.toString(), "image/jpeg")
+                        // Base64'e çevir ve Firestore'a kaydet
+                        convertImageToBase64(uri)
                     }
                 }
                 PICK_VIDEO_REQUEST -> {
                     selectedUri?.let { uri ->
-                        // Firestore'a medya URL'ini kaydet
-                        sendMediaMessage(uri.toString(), "video/mp4")
+                        // Base64'e çevir ve Firestore'a kaydet
+                        convertVideoToBase64(uri)
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun convertImageToBase64(uri: Uri) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+                
+                if (bytes != null) {
+                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+                    sendBase64MediaMessage(base64, "image/jpeg", "📷 Resim")
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@ChatActivity, "Resim yüklenemedi: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    
+    private fun convertVideoToBase64(uri: Uri) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val inputStream = contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+                
+                if (bytes != null) {
+                    val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+                    sendBase64MediaMessage(base64, "video/mp4", "🎥 Video")
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@ChatActivity, "Video yüklenemedi: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    
+    private fun sendBase64MediaMessage(base64Data: String, mediaType: String, caption: String) {
+        if (chatId.isNotEmpty()) {
+            lifecycleScope.launch {
+                try {
+                    val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                    val result = firebaseService.sendBase64MediaMessage(chatId, realCurrentUserId, currentUsername, base64Data, mediaType, caption)
+                    if (result.isSuccess) {
+                        runOnUiThread {
+                            Toast.makeText(this@ChatActivity, "Medya gönderildi", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(this@ChatActivity, "Medya gönderilemedi", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

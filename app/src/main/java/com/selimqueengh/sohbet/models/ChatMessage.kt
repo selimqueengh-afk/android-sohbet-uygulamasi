@@ -9,7 +9,7 @@ data class ChatMessage(
     val senderUsername: String = "",
     val content: String = "",
     val messageType: String = "text", // text, image, video, audio
-    val mediaUrl: String = "",
+    val mediaData: String = "", // Base64 encoded media data
     val mediaType: String = "", // image/jpeg, video/mp4, etc.
     val timestamp: Long = 0,
     val isRead: Boolean = false,
