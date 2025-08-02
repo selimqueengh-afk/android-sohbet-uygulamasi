@@ -334,14 +334,17 @@ class ChatActivity : AppCompatActivity() {
                 )
                 
                 runOnUiThread {
-                    // Check if message already exists to avoid duplicates
-                    val existingMessage = messageList.find { 
-                        it.text == message.text && it.timestamp == message.timestamp 
-                    }
-                    if (existingMessage == null) {
-                        messageList.add(message)
-                        messageAdapter.notifyItemInserted(messageList.size - 1)
-                        recyclerView.scrollToPosition(messageList.size - 1)
+                    // Kendi gönderdiğimiz mesajları real-time listener'dan ekleme
+                    if (!isSentByCurrentUser) {
+                        // Check if message already exists to avoid duplicates
+                        val existingMessage = messageList.find { 
+                            it.text == message.text && it.timestamp == message.timestamp 
+                        }
+                        if (existingMessage == null) {
+                            messageList.add(message)
+                            messageAdapter.notifyItemInserted(messageList.size - 1)
+                            recyclerView.scrollToPosition(messageList.size - 1)
+                        }
                     }
                 }
             }
@@ -352,21 +355,40 @@ class ChatActivity : AppCompatActivity() {
         val messageText = messageEditText.text.toString().trim()
         if (messageText.isNotEmpty()) {
             if (chatId.isNotEmpty()) {
-                // Input'u hemen temizle
+                // Hemen UI'da göster (optimistic update)
+                val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
+                val optimisticMessage = Message(
+                    text = messageText,
+                    sender = "Ben",
+                    isSentByUser = true,
+                    timestamp = System.currentTimeMillis(),
+                    messageType = "text"
+                )
+                
+                // UI'ya ekle
+                messageList.add(optimisticMessage)
+                messageAdapter.notifyItemInserted(messageList.size - 1)
+                recyclerView.scrollToPosition(messageList.size - 1)
+                
+                // Input'u temizle
                 messageEditText.text.clear()
                 
                 // Firebase'e gönder
                 lifecycleScope.launch {
                     try {
-                        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
                         val result = firebaseService.sendMessage(chatId, realCurrentUserId, currentUsername, messageText)
                         if (!result.isSuccess) {
+                            // Hata durumunda UI'dan kaldır
                             runOnUiThread {
+                                messageList.removeAt(messageList.size - 1)
+                                messageAdapter.notifyItemRemoved(messageList.size)
                                 Toast.makeText(this@ChatActivity, "Mesaj gönderilemedi", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } catch (e: Exception) {
                         runOnUiThread {
+                            messageList.removeAt(messageList.size - 1)
+                            messageAdapter.notifyItemRemoved(messageList.size)
                             Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
