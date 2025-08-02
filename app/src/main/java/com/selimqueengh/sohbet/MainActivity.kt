@@ -3,16 +3,12 @@ package com.selimqueengh.sohbet
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.selimqueengh.sohbet.fragments.ChatsFragment
 import com.selimqueengh.sohbet.services.FirebaseService
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     
@@ -36,8 +32,8 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupClickListeners()
         
-        // Kullanıcıyı online yap
-        setUserOnline()
+        // Default to chats fragment
+        showChatsFragment()
     }
 
     private fun initViews() {
@@ -68,9 +64,6 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
-        
-        // Default to chats fragment
-        showChatsFragment()
     }
 
     private fun showChatsFragment() {
@@ -79,11 +72,8 @@ class MainActivity : AppCompatActivity() {
             .replace(R.id.contentFrame, fragment)
             .commit()
     }
-    
-
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        // Menu removed as requested
         return false
     }
 
@@ -97,45 +87,5 @@ class MainActivity : AppCompatActivity() {
             // Refresh chats when returning from friend requests
             showChatsFragment()
         }
-    }
-    
-    // ===== ONLINE/OFFLINE DURUMU YÖNETİMİ =====
-    
-    private fun setUserOnline() {
-        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
-        if (realCurrentUserId.isNotEmpty()) {
-            lifecycleScope.launch {
-                firebaseService.setUserOnline(realCurrentUserId)
-                Log.d("MainActivity", "User set to ONLINE: $realCurrentUserId")
-            }
-        }
-    }
-    
-    private fun setUserOffline() {
-        val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
-        if (realCurrentUserId.isNotEmpty()) {
-            lifecycleScope.launch {
-                firebaseService.setUserOffline(realCurrentUserId)
-                Log.d("MainActivity", "User set to OFFLINE: $realCurrentUserId")
-            }
-        }
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        // Uygulama ön plana geldiğinde online yap
-        setUserOnline()
-    }
-    
-    override fun onPause() {
-        super.onPause()
-        // Uygulama arka plana geçtiğinde offline yap
-        setUserOffline()
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        // Uygulama kapatıldığında offline yap
-        setUserOffline()
     }
 }

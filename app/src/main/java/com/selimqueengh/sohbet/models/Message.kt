@@ -5,7 +5,5 @@ data class Message(
     val sender: String,
     val isSentByUser: Boolean,
     val timestamp: Long,
-    val messageType: String = "text",
-    val mediaData: String = "",
-    val mediaType: String = ""
+    val messageType: String = "text"
 )
