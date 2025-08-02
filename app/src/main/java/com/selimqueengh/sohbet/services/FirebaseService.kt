@@ -52,7 +52,7 @@ class FirebaseService {
         remoteConfig.setDefaultsAsync(mapOf(
             REMOTE_CONFIG_APP_VERSION to "1.0.0",
             REMOTE_CONFIG_FORCE_UPDATE to false,
-            REMOTE_CONFIG_UPDATE_URL to "https://play.google.com/store/apps/details?id=com.selimqueengh.sohbet",
+            REMOTE_CONFIG_UPDATE_URL to "https://github.com/selimqueengh-afk/android-sohbet-uygulamasi/releases/latest/download/app-debug.apk",
             REMOTE_CONFIG_MAINTENANCE_MODE to false
         ))
         
