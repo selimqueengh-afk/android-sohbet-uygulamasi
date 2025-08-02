@@ -30,7 +30,10 @@
             android:layout_height="200dp"
             android:scaleType="centerCrop"
             android:visibility="gone"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="4dp"
+            android:background="@drawable/media_background"
+            android:padding="8dp"
+            android:clipToOutline="true" />
 
         <TextView
             android:id="@+id/textViewTime"

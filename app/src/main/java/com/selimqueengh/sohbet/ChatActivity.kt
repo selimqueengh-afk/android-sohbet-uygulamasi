@@ -487,12 +487,15 @@ class ChatActivity : AppCompatActivity() {
     private fun convertImageToBase64(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                Log.d("ChatActivity", "Converting image to Base64...")
                 val inputStream = contentResolver.openInputStream(uri)
                 val bytes = inputStream?.readBytes()
                 inputStream?.close()
                 
                 if (bytes != null && bytes.size <= 5 * 1024 * 1024) { // 5MB limit
+                    Log.d("ChatActivity", "Image size: ${bytes.size} bytes")
                     val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+                    Log.d("ChatActivity", "Base64 length: ${base64.length}")
                     sendBase64MediaMessage(base64, "image/jpeg", "📷 Resim")
                 } else {
                     runOnUiThread {
@@ -500,6 +503,7 @@ class ChatActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                Log.e("ChatActivity", "Error converting image: ${e.message}")
                 runOnUiThread {
                     Toast.makeText(this@ChatActivity, "Resim yüklenemedi: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -510,12 +514,15 @@ class ChatActivity : AppCompatActivity() {
     private fun convertVideoToBase64(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                Log.d("ChatActivity", "Converting video to Base64...")
                 val inputStream = contentResolver.openInputStream(uri)
                 val bytes = inputStream?.readBytes()
                 inputStream?.close()
                 
                 if (bytes != null && bytes.size <= 10 * 1024 * 1024) { // 10MB limit
+                    Log.d("ChatActivity", "Video size: ${bytes.size} bytes")
                     val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.DEFAULT)
+                    Log.d("ChatActivity", "Base64 length: ${base64.length}")
                     sendBase64MediaMessage(base64, "video/mp4", "🎥 Video")
                 } else {
                     runOnUiThread {
@@ -523,6 +530,7 @@ class ChatActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                Log.e("ChatActivity", "Error converting video: ${e.message}")
                 runOnUiThread {
                     Toast.makeText(this@ChatActivity, "Video yüklenemedi: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -534,18 +542,22 @@ class ChatActivity : AppCompatActivity() {
         if (chatId.isNotEmpty()) {
             lifecycleScope.launch {
                 try {
+                    Log.d("ChatActivity", "Sending media message: $mediaType")
                     val realCurrentUserId = firebaseService.getCurrentUser()?.uid ?: currentUserId
                     val result = firebaseService.sendBase64MediaMessage(chatId, realCurrentUserId, currentUsername, base64Data, mediaType, caption)
                     if (result.isSuccess) {
+                        Log.d("ChatActivity", "Media message sent successfully")
                         runOnUiThread {
                             Toast.makeText(this@ChatActivity, "Medya gönderildi", Toast.LENGTH_SHORT).show()
                         }
                     } else {
+                        Log.e("ChatActivity", "Failed to send media message")
                         runOnUiThread {
                             Toast.makeText(this@ChatActivity, "Medya gönderilemedi", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {
+                    Log.e("ChatActivity", "Error sending media: ${e.message}")
                     runOnUiThread {
                         Toast.makeText(this@ChatActivity, "Hata: ${e.message}", Toast.LENGTH_SHORT).show()
                     }

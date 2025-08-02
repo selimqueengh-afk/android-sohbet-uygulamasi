@@ -57,6 +57,8 @@ class MessageAdapter(private val messages: List<Message>) :
                             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                             if (bitmap != null) {
                                 messageImage?.setImageBitmap(bitmap)
+                                // Modern görünüm için corner radius ekle
+                                messageImage?.clipToOutline = true
                             } else {
                                 messageText.visibility = View.VISIBLE
                                 messageImage?.visibility = View.GONE
