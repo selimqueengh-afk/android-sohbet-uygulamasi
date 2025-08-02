@@ -60,7 +60,6 @@ class FirebaseService {
         remoteConfig.fetchAndActivate().addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Log.d(TAG, "Remote config updated successfully")
-                checkForUpdates()
             } else {
                 Log.e(TAG, "Remote config update failed", task.exception)
             }
@@ -100,12 +99,58 @@ class FirebaseService {
     
     fun getCurrentUser() = auth.currentUser
     
-    suspend fun signIn(email: String, password: String): Result<Unit> {
+    suspend fun signInWithEmailPassword(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error signing in", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun registerWithEmailPassword(email: String, password: String): Result<Unit> {
+        return try {
+            auth.createUserWithEmailAndPassword(email, password).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun createUser(userId: String, username: String, displayName: String): Result<Unit> {
+        return try {
+            // Kullanıcı adının benzersiz olup olmadığını kontrol et
+            val existingUser = firestore.collection(USERS_COLLECTION)
+                .whereEqualTo("username", username)
+                .get()
+                .await()
+            
+            if (!existingUser.isEmpty) {
+                return Result.failure(Exception("Bu kullanıcı adı zaten kullanılıyor"))
+            }
+            
+            val userData = hashMapOf(
+                "id" to userId,
+                "username" to username,
+                "displayName" to displayName,
+                "avatarUrl" to "",
+                "status" to "ONLINE",
+                "lastSeen" to com.google.firebase.Timestamp.now(),
+                "isOnline" to true,
+                "friends" to listOf<String>(),
+                "createdAt" to com.google.firebase.Timestamp.now()
+            )
+            
+            firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .set(userData)
+                .await()
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating user", e)
             Result.failure(e)
         }
     }
@@ -178,6 +223,59 @@ class FirebaseService {
         }
     }
     
+    suspend fun getUsers(): Result<List<User>> {
+        return try {
+            val snapshot = firestore.collection(USERS_COLLECTION)
+                .get()
+                .await()
+            
+            val users = snapshot.documents.mapNotNull { doc ->
+                try {
+                    doc.toObject(User::class.java)?.copy(id = doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error deserializing user: ${doc.id}", e)
+                    // Fallback: create user manually from document data
+                    val data = doc.data
+                    if (data != null) {
+                        User(
+                            id = doc.id,
+                            username = data["username"] as? String ?: "",
+                            displayName = data["displayName"] as? String ?: "",
+                            avatarUrl = data["avatarUrl"] as? String,
+                            status = UserStatus.valueOf(data["status"] as? String ?: "OFFLINE"),
+                            lastSeen = data["lastSeen"],
+                            isOnline = data["isOnline"] as? Boolean ?: false,
+                            isTyping = data["isTyping"] as? Boolean ?: false,
+                            typingTo = data["typingTo"] as? String
+                        )
+                    } else null
+                }
+            }
+            Result.success(users)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting users", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getUserById(userId: String): Result<User?> {
+        return try {
+            val doc = firestore.collection(USERS_COLLECTION)
+                .document(userId)
+                .get()
+                .await()
+            
+            val user = if (doc.exists()) {
+                doc.toObject(User::class.java)?.copy(id = doc.id)
+            } else null
+            
+            Result.success(user)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user by ID", e)
+            Result.failure(e)
+        }
+    }
+    
     suspend fun updateUserProfile(userId: String, displayName: String, avatarUrl: String?): Result<Unit> {
         return try {
             val updates = hashMapOf<String, Any>(
@@ -227,6 +325,27 @@ class FirebaseService {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending friend request", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getIncomingFriendRequests(userId: String): Result<List<Map<String, Any>>> {
+        return try {
+            val snapshot = firestore.collection(FRIEND_REQUESTS_COLLECTION)
+                .whereEqualTo("toUserId", userId)
+                .whereEqualTo("status", "PENDING")
+                .get()
+                .await()
+            
+            val requests = snapshot.documents.map { doc ->
+                doc.data?.toMutableMap()?.apply {
+                    put("requestId", doc.id)
+                } ?: mutableMapOf()
+            }
+            
+            Result.success(requests)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting incoming friend requests", e)
             Result.failure(e)
         }
     }
@@ -354,6 +473,21 @@ class FirebaseService {
             Log.e(TAG, "Error creating chat", e)
             Result.failure(e)
         }
+    }
+    
+    fun createRealtimeChat(user1Id: String, user2Id: String): String {
+        val chatId = if (user1Id < user2Id) "${user1Id}_${user2Id}" else "${user2Id}_${user1Id}"
+        
+        val chatRef = database.getReference("chats").child(chatId)
+        val chatData = hashMapOf(
+            "participants" to listOf(user1Id, user2Id),
+            "lastMessage" to "",
+            "lastMessageTimestamp" to System.currentTimeMillis(),
+            "createdAt" to System.currentTimeMillis()
+        )
+        
+        chatRef.setValue(chatData)
+        return chatId
     }
 
     suspend fun getChats(userId: String): Result<List<Map<String, Any>>> {
