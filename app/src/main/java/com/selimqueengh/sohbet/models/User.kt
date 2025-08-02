@@ -16,10 +16,3 @@ data class User(
     val isTyping: Boolean = false,
     val typingTo: String? = null
 ) : Parcelable
-
-enum class UserStatus {
-    ONLINE,
-    OFFLINE,
-    AWAY,
-    BUSY
-}
