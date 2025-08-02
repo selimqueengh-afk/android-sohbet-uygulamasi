@@ -3,7 +3,6 @@ package com.selimqueengh.sohbet.models
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
-import com.google.firebase.Timestamp
 
 @Parcelize
 data class User(
@@ -17,3 +16,10 @@ data class User(
     val isTyping: Boolean = false,
     val typingTo: String? = null
 ) : Parcelable
+
+enum class UserStatus {
+    ONLINE,
+    OFFLINE,
+    AWAY,
+    BUSY
+}

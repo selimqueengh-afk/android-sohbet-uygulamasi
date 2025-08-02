@@ -162,7 +162,7 @@ class LoginActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                val currentUser = authResult.getOrNull()
+                val currentUser = firebaseService.getCurrentUser()
                 if (currentUser == null) {
                     runOnUiThread {
                         Toast.makeText(this@LoginActivity, "Kullanıcı bulunamadı", Toast.LENGTH_SHORT).show()
@@ -219,7 +219,7 @@ class LoginActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                val currentUser = authResult.getOrNull()
+                val currentUser = firebaseService.getCurrentUser()
                 if (currentUser == null) {
                     runOnUiThread {
                         Toast.makeText(this@LoginActivity, "Kullanıcı oluşturulamadı", Toast.LENGTH_SHORT).show()
